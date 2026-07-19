@@ -72,8 +72,8 @@ Ask a few questions at a time and adapt — don't dump the whole checklist at on
 5. **Map the stretch menu.** Tell them which optional tools (A2UI, image gen,
    sandbox, storage) fit their domain — this is what they'll reach for after the
    core rails are done.
-6. **Write the brief.** Output the project brief (template below) so they have
-   something concrete to build from and to demo against.
+6. **Write the spec file.** Save the brief as `project_brief.md` in the workspace
+   (format below) — the build step points `agents-cli` at this file.
 
 Keep them moving. Perfect is the enemy of started — if they have a viable idea
 that clears the bar, lock it in and let them refine while building.
@@ -91,9 +91,11 @@ Offer these only if they're stuck. Each is known to exercise the tools well:
 - Workout / gear coach (goals memory; plan lookup; progress calc in sandbox)
 - Plant-care / greenhouse shop (the sample — care history; inventory; plant images)
 
-## Output: the project brief
+## Output: write the spec file
 
-End by writing a short brief the participant keeps. Format:
+When the brief is filled in, **write it to a file named `project_brief.md`** in the
+workspace (don't just print it to chat). The build step points `agents-cli` at
+this file, so it's the handoff between deciding and building. Use this format:
 
 ```
 # My agent: <name>
@@ -107,11 +109,12 @@ Tool coverage:
 - Sandbox: <what computation, or "n/a">
 
 Core rails (everyone): memory, tools, eval, deploy, frontend
-My stretch menu (pick during hackathon): <the optional tools that fit>
+My stretch menu (pick later): <the optional tools that fit>
 First eval question: <one example of a "good" response for this agent>
 ```
 
-The "first eval question" line is deliberate — it plants the evaluation mindset
-early, since defining "good" is the hardest and most valuable part of the lab.
+The "first eval question" plants the evaluation mindset early — defining "good"
+is the hardest, most valuable part of the lab.
 
-DO NOT IMPLEMENT ANYTHING. Just output a short brief as `project_brief.md`.
+**Do not build or implement anything in this skill.** Your only output is
+`project_brief.md`; building from it happens in the next step of the lab.
