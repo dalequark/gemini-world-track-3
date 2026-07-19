@@ -65,15 +65,17 @@ gcloud config get-value project          # what's active right now?
 echo "$GOOGLE_CLOUD_PROJECT"             # what the env thinks it is
 ```
 
-If either is wrong or empty, pin it to the Qwiklabs Project ID:
+If either is wrong or empty, **ask the user for their Qwiklabs Project ID** (from
+the lab panel) and pin it for them by running:
 
 ```bash
-export GOOGLE_CLOUD_PROJECT=<your qwiklabs project id>
+export GOOGLE_CLOUD_PROJECT=<their qwiklabs project id>
 gcloud config set project "$GOOGLE_CLOUD_PROJECT"
 ```
 
 Also confirm the project is pinned inside AGY's own settings so it can't switch
-mid-run.
+mid-run. During preflight, always pin the project this way — don't assume it's
+already set.
 
 **2. Has the user authenticated?** Two separate logins are required — a missing
 Application Default Credentials (ADC) login is the #1 cause of 403s from code.
