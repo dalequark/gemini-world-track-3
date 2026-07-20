@@ -56,8 +56,6 @@ permission errors because AGY is acting as the wrong identity.
   instructions), then re-run the preflight.
 
 **1. Is the right project set?** Cloud Shell / AGY can silently default to the
-
-**1. Is the right project set?** Cloud Shell / AGY can silently default to the
 wrong project (e.g. `cloudshell-gca`), which makes enable/deploy commands fail.
 
 ```bash
@@ -65,8 +63,12 @@ gcloud config get-value project          # what's active right now?
 echo "$GOOGLE_CLOUD_PROJECT"             # what the env thinks it is
 ```
 
-If either is wrong or empty, **ask the user for their Qwiklabs Project ID** (from
-the lab panel) and pin it for them by running:
+A correctly-set Qwiklabs project ID **contains the string `qwiklabs`** (e.g.
+`qwiklabs-gcp-01-abc123def456`). If the active project doesn't contain
+`qwiklabs`, it's almost certainly the wrong project — treat that as a red flag.
+
+If either is wrong, empty, or missing `qwiklabs`, **ask the user for their
+Qwiklabs Project ID** (from the lab panel) and pin it for them by running:
 
 ```bash
 export GOOGLE_CLOUD_PROJECT=<their qwiklabs project id>
