@@ -394,121 +394,83 @@ software taught in this lab. In AGY:
 
 ```Help me design an old-timey apothecary agent that sells tinctures and potions```.
 
+AGY will help you brainstorm, and ask clarifying questions:
 
----
+![](images/designbrief.png)
 
+When you're done, AGY will output a `design_brief.md` file for your review. Edit it yourself or with AGY until you have something you like:
+![](images/designbrief.png)
 
-## Long-Term Memory
-
-Right now your agent forgets everything the moment a session ends. Prove it: start a fresh session and ask it to recall something from an earlier chat — it can't.
-
-![A fresh session where the agent fails to recall a fact from a previous conversation](images/memory-forgets.png)
-
-**Long-term memory** fixes this. In ADK, memory is a searchable, cross-session store provided by a `MemoryService`; the managed option is **Vertex AI Memory Bank**, which uses Gemini to extract durable facts (e.g. "this customer prefers calming potions") and recall them later. Turn it on:
-
-```
-Add long-term memory to my agent using Agent Platform so it remembers facts across sessions: ingest each finished session into memory, and load relevant memories at the start of new ones.
-```
-
-Now start a new session and ask it to recall that earlier fact — it should.
-
+Our agent will use this for reference as we continue development.
 
 ## Persistent Storage for App Data
 
-<!-- owner: Dale Markowitz (dalequark@google.com) -->
+Depending on your application, you may require an external data store, like:
 
-Earlier, we talked about three kinds of conversational storage: **sessions**, **state**, and **artifacts**. But those are specific to the conversation itself. We often also want our agents to read and write **application data** that lives outside any chat — inventory, user profiles, order history, saved preferences, or transaction logs. This falls into two buckets:
+- **Structured data** (inventory, orders, user records) → a database like **Firestore** (serverless, simple).
+- **Raw files/blobs** (bulk images, static assets) → **Cloud Storage (GCS)**.
 
-- **Structured data** (inventory, orders, user records) → a database like **Firestore** (serverless, simple) or **Cloud SQL**. Your agent reaches it through a **function tool** (see *Add Tools*).
-- **Raw files/blobs** (bulk images, static assets) → **Cloud Storage (GCS)**. *(Files the agent produces during a conversation should be **artifacts** instead — which are themselves backed by GCS.)*
-
-For our Apothecary, we'll create a simple key-value database to store inventory. We'll use **Firestore** because it's lightweight and has a convenient browser interface.
-
-First, give **Antigravity** (your coding agent) the ability to manage Firestore by connecting it to the **Firestore MCP server**. This is a remote MCP server (no install — it's enabled when the Firestore API is on) that lets AGY create databases, seed documents, and read/write collections for you:
+Let's start by implementing structured data in Firestore. First, let's equip Antigravity with the [Firebase MCP](https://firebase.google.com/docs/ai-assistance/mcp-server) so it's better able to use the Firestore API:
 
 ```
-Follow this guide to connect to the Firestore MCP server: https://docs.cloud.google.com/firestore/native/docs/use-firestore-mcp
+Install the Firebase MCP server.
 ```
 
-> **Which MCP — and who uses it?** This is the **Firestore** MCP (remote, `https://firestore.googleapis.com/mcp`), not the broader Firebase CLI MCP. We give it to **AGY** so it can *build* your backend — stand up the database and generate the code. Your **deployed** agent won't use this MCP at runtime; it reaches Firestore through **function tools** AGY writes for it (see *Add Tools*). That keeps the running agent's data access explicit and under your control rather than handing it a general-purpose database MCP.
-
-Then have it stand up a Firestore backend, describe the schema at a high level, and wire it to your agent with function tools:
-
+When that's done, ask AGY to give your agent a Firestore backend:
 ```
-Add a Firestore backend for my agent. For the Apothecary, create a "potions" collection where each document has name, potency, price, and stock. Add function tools so my agent can read and write it, and seed a few sample potions.
+Give my agent a Firestore database. Create a "inventory" collection of herbs, spices, potions collection where each document has name, description, price, and stock. Add function tools so my agent can read and write it, and seed a few sample potions.
 ```
 
-> ⚠️ Heads-up: this step commonly trips on **auth/permissions**. If you hit errors, run `Check my setup.` and confirm the Firestore API is enabled and your identity (and later your Cloud Run service account) can access it.
+In Sandbox, we can verify this worked by asking the agent something it can only answer by querying the database, i.e.  *"How many healing potions are in stock?"*.
 
-Test it: ask the agent something only its data can answer — for the Apothecary, *"How many healing potions are in stock?"* — and confirm it reads from Firestore through the tool.
-
-You can watch the data live in the **Firebase console → Firestore Database**. A nice property of Firestore is that it's **real-time**: as your agent writes (say, selling a potion decrements stock), the document updates instantly in the browser — great for live demos and debugging.
+You can watch the data live in the **Firebase console → Firestore Database**. A nice property of Firestore is that it's **real-time**: as your agent writes (say, selling a potion decrements stock), the document updates instantly in the browser.
 
 ![The Firestore data viewer in the Firebase console showing the seeded potions collection](images/firestore-potions.png)
-
----
 
 
 ## Add Tools
 
 <!-- owner: Christina Zhu (cszhu@google.com) -->
 
-Right now, your agent can only talk. **Tools** are functions your agent can call to actually *do* things: query a database, hit an API, process a transaction, do math, generate media. This is when your agent stops being a chatbot and starts doing real work — and each tool call shows up in the Traces tab you saw in Part 1.
+Right now, your agent can only talk. Tools are functions that your agent can use to actually do things and execute. Some tool examples are: looking up data from a database, taking an action (like sending an email), creating something. This is when your agent stops just being a chatbot and starts actually doing things.
 
-What kind of tool you need depends on your application. If you set up persistent storage above, your agent already uses a tool to read and write its database. You'll often also want a tool that carries out a fixed business action — for the Apothecary, completing a sale:
+Every agent is different, so start by asking your coding AI assistant tools that fit the agent you’ve decided to build:
+
+```bash
+Look at the agent I'm building. Suggest 2–3 tools it could call to take real action or fetch real data, then recommend the simplest one to implement first.
+```
+After discussing and planning with your agent, pick one to implement. 
+
+```bash
+Implement the tool we just discussed as a function tool and add it to my agent. Keep the implementation minimal.
+```
+
+Test it in the agent playground or debug screen. Ask it to do something that the tool is able to do, and the agent should be able to call the tool. You should be able to confirm this trace in the logs. 
+
+## Generative AI (Omni)
+Tools can also give your agent the power of Google’s generative AI models. A great tool call you can use utilizes Google’s latest in multimodal image and video software, Omni, which allows your agent to create any visual assets for you.
 
 ```
-Add a tool to my agent that processes a potion purchase: given a potion name and quantity, check stock in Firestore, decrement it, record the order, and return a receipt.
+Add a tool that generates an image for an item in my agent's domain using Gemini's image generation model. It should take a short subject/description and return the image.
 ```
 
-Test it in the Playground. Ask the agent to do something the tool enables — for the Apothecary, *"I'll take two healing potions"* — and confirm the tool call shows up in the Traces tab.
+Now ask your agent to generate an image for one of the items you might need. You should get back a real image. 
 
 ### Run Code in a Sandbox
 
-A special kind of tool: sometimes your agent needs to *compute* — do math, analyze data, generate a stat or a chart. Agent Runtime offers code execution in an isolated **sandbox** (distinct from the local chat sandbox in Part 1): your agent writes and runs Python safely, and it never touches your host.
+Some agents need to execute code - and whether that’s for quick API calls, data analysis, or just doing math. Agent Runtime offers code execution in an isolated sandbox, so your agent is able to code safely. Since the state persists across sessions and it doesn’t touch your host, it is a very safe way to run model-generated code, even in enterprise settings.
 
-*Example (Apothecary):* *"Chart my potion inventory by potency"* — the agent writes Python to aggregate the stock and returns a chart image.
+Prereqs: the Agent Platform API enabled, and your agent's identity has roles/aiplatform.user.
 
-Prereqs: the Agent Platform API enabled, and your agent's identity has `roles/aiplatform.user`.
-
-```
+```bash
 Add Agent Runtime code execution to my agent using AgentEngineSandboxCodeExecutor so it can safely run Python in a sandbox. If I don't already have a sandbox, create one from my agent engine resource.
 ```
 
-Test it with something that needs real computation — for the Apothecary, ask it to chart inventory by potency or price — and confirm the agent runs code in the sandbox and answers from the result. For agents doing data analysis, trading, or coding, this is a superpower.
+Test it by asking a question that requires real computation or analysis, like fizzbuzz, and  confirm the agent runs code in the sandbox and answers from the result. 
+
+Of course, you are able to update your tool instructions from the last section to use the sandbox as well. For folks who are building agents for things like auto-trading or coding, this is a super useful feature to incorporate into your agent.
 
 
----
-
-## Generate Media Assets with Omni and Lyria
-
-<!-- owner: Christina Zhu (cszhu@google.com) -->
-
-Tools can also give your agent the power of Google's generative models — to create images, video, and even music on demand.
-
-**Images & video with Omni.** Let's have the Apothecary illustrate its inventory. Generated assets look best when they share a consistent style, so capture that in a **custom skill** — a short instruction file that tells Antigravity how you want assets made (a great use of the skills concept from setup):
-
-```
-Write a skill that tells you how to generate media for my app with Omni: always render inventory assets in a consistent retro pixel-art style, save each asset to my GCS bucket, and store its URL on the matching Firestore item.
-```
-
-Now ask your agent to illustrate an item:
-
-```
-Generate a pixel-art image for the "Draught of Living Death" potion and attach it to that item in my inventory.
-```
-
-Behind the scenes, Omni generates the image, it's saved to **GCS** (blob storage), and its URL is linked from the potion's **Firestore** record — so your frontend can display it later. (It'll also appear in the **Artifacts** panel.)
-
-![A generated pixel-art potion image shown alongside its Firestore record](images/omni-potion-firestore.png)
-
-**Music with Lyria.** For ambience, Google's **Lyria** model generates music — give your shop a soundtrack:
-
-```
-Add a tool that uses Lyria to generate a short background music clip (for the Apothecary, a cozy shop theme) and save it to GCS.
-```
-
----
 
 ## Enable Rich Responses with A2UI
 
