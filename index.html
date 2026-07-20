@@ -135,6 +135,11 @@
   body.hide-presenter #content blockquote.ph-presenter { display: none; }
   .toggle-row { display: flex; align-items: center; gap: .45rem; padding: .1rem 0 .55rem; font-size: .72rem; color: #9fb0c3; cursor: pointer; user-select: none; }
   .toggle-row input { cursor: pointer; margin: 0; }
+  /* Pending (not-yet-added) screenshots render as a clean placeholder, not a broken icon */
+  #content .img-pending {
+    background:#f3e8ff; border:2px dashed #7c3aed; color:#4a2c72;
+    border-radius:10px; padding:1rem 1.25rem; margin:1rem 0; font-size:.88rem; font-weight:500;
+  }
 
   /* Tables */
   #content table { width: 100%; border-collapse: collapse; font-size: .9rem; margin: 1rem 0; }
@@ -181,7 +186,7 @@
 <script type="text/markdown" id="md-inline">
 # Introduction
 
-In this lab, you'll learn how to build your own agent-first application using Google Cloud tools.
+In this lab, you'll learn how to build an entire production-ready agentic application using Google Cloud tools.
 
 You will:
 
@@ -192,57 +197,80 @@ You will:
 - Equip your agent with the power to use Google's Generative Models
 - Build an agent-first frontend, hosted on Cloud Run and powered by A2UI
 
-## How this workshop works
-
-- **Part 1 — Basics.** Together we'll build a simple example agent — the **Alchemist's Apothecary**, a magical potions shop — to learn the basics: how to create an agent and test it locally in the Playground.
-- **Part 2 — Your agent.** Brainstorm your *own* agent-powered idea and productionize it with state & memory, tools, rich UI, evaluation, deployment, and a frontend.
-
-The Apothecary is just *our* example — in Part 2 you'll build whatever is most relevant and exciting to you, and you can diverge whenever you like.
-
 # Set Up Your Environment
 
-<!-- owner: Dale Markowitz (dalequark@google.com) -->
+Find your Qwiklab credentials [here](https://explore.qwiklabs.com/authoring/labs/471145). **Don't follow that tutorial's setup instructions.** (TODO to update the correct instructions in Qwiklab). Instead, right-click on "Open Google Cloud Console" and select "Open Link in Incognito Window," then log in with the provided credentials.
 
-> ⚠️ **TODO:** This is the one consolidated setup section — fill in the exact details (auth consent screens, org policies, any service enablement) later. The skeleton and the required commands are below.
+Once you're logged into Google Cloud Console with your Qwiklab credentials, launch a Workstation:
 
-> **Qwiklabs fragments** (inserted automatically at publish time): `/fragments/startqwiklab`, `/fragments/gcpconsole`, `/fragments/cloudshell`
+![](images/search_workstation.png)
+![](images/launch_workstation.png)
+
+ We'll do all our development here, in Code OSS (i.e. the Cloud Shell Editor within a Workstation):
+![](images/workstation_developer_interface.png)
+
+> **Important** We'll be developing with the Cloud Shell editor WITHIN A WORKSTATION. If you try to use Cloud Shell OUTSIDE of a Workstation, you'll quickly run out of memory. So make sure not to do that!
+
+Click the button in the upper right hand corner to open a terminal:
+![](images/open-terminal.png)
 
 ## Authenticate
 
-Log in with your Qwiklabs credentials so both the CLI and Application Default Credentials (ADC) are set:
+In Cloud Shell, run the following commands to set up authentication using your Qwiklab credentials:
 
 ```bash
 gcloud auth login
 gcloud auth application-default login
 ```
 
-## Download the workshop repo (pre-installed skills)
+## Get Started with Antigravity CLI
 
-<!-- (Taken from Lavi and Kaz — thanks!) -->
 
-> **What's a skill?** A skill is a bundle of instructions that teaches your coding agent how to do a specific task well. It loads automatically when it's relevant, so you get expert behavior without spelling out every step yourself.
+To start, download this [Github repo](https://github.com/dalequark/gemini-world-track-3) that comes equipped with 
+a selection of starter skills. 
 
-This repo ships with helper **skills** already included, which Antigravity picks up automatically — including one that helps you brainstorm *what* to build (`pick-your-agent-project`) and one that checks your environment is set up correctly (`troubleshoot-lab-setup`). In Cloud Shell, clone it:
+
+> **What is a skill?** A bundle of instructions that teaches your coding agent how to do a specific task well. It loads automatically when it's relevant, so you get expert behavior without spelling out every step yourself.
+
+
+To download it:
 
 ```bash
 git clone https://github.com/dalequark/gemini-world-track-3
 cd gemini-world-track-3
 ```
 
-Then **open this folder as your workspace in Antigravity**. On startup, AGY scans the repo's `.agents/skills/` directory and indexes the workshop skills automatically — you invoke one just by asking your agent for what you want in plain language, and the matching skill loads itself. To see what's installed, run `/skills` in AGY. (You'll run your first one, `Check my setup.`, in just a moment.)
+From this new folder (`gemini-world-track-3`), run Antigravity CLI in the Cloud Shell.
 
+```bash
+agy
+```
 
-## Install agents-cli
+When asked, **choose option 2 to authenticate with a Google Cloud project** and complete the sign in flow. Make sure to use the userid, password, project id and region provided with your Qwiklab credentials.
+![](images/agy-cloud-login.png)
 
-[**agents-cli**](https://google.github.io/agents-cli/guide/getting-started/) is Google's CLI for the full agent development lifecycle — scaffold, deploy, evaluate, and publish — all on top of the [Agent Development Kit (ADK)](https://google.github.io/adk-docs/). It's both a command-line tool and a set of skills that enable your coding agent (i.e. Antigravity) to work with Google's agent tools most effectively.
+> **Avoid agent confusion!** In this workshop, we'll be _building_ an agent with the help of an _additional_ agent--specifically, with the coding agent Antigravity (AGY). It's helpful to keep this distinction in mind as we go through the lab.
+
+On startup, AGY will scan the existing `.agents/skills/` folder and load the workshop skills automatically. To see your installed skills, run `/skills` in AGY. You should see three skills listed:
+
+![](images/verify-skills.png)
+
+## Install Additional Tools
+
+The Github repo we downloaded in the last step gave us some basic tools to get started. Let's augment our environment with even more useful skills and MCPs to make developing agents on Google Cloud even easier.
 
 > **Why skills matter:** by packaging the right steps and context up front, skills save tokens and time and improve accuracy — the agent completes a task in fewer steps, instead of rediscovering (and sometimes getting wrong) the workflow every time.
+
+### Agent CLI
+
+[**agents-cli**](https://google.github.io/agents-cli/guide/getting-started/) is Google's CLI for the full agent development lifecycle — scaffold, deploy, evaluate, and publish — all on top of the [Agent Development Kit (ADK)](https://google.github.io/adk-docs/). It's both a command-line tool and a set of skills that enable your coding agent (in this case, Antigravity) to work with Google's agent development tools effectively.
 
 ```
 Install and configure agents-cli. When you're done, make sure you have access to the SKILL files it exposes.
 ```
+**IMPORTANT TODO**: right now, `agents-cli` isn't installed by default in the workstations, and installation is time consuming. We **must** have this pre-installed for the actual lab.
 
-## Install the Developer Knowledge MCP
+### The Developer Knowledge MCP
 
 > **What's an MCP?** Model Context Protocol (MCP) is a standard way to plug external tools and data sources into your coding agent. An MCP *server* gives the agent a new ability — here, the ability to search Google's official documentation.
 
@@ -252,156 +280,129 @@ Now let's give Antigravity **grounded, current knowledge of Google's official do
 Follow the directions at https://codelabs.developers.google.com/developer-knowledge-mcp-antigravity to install the Google Developer Knowledge MCP.
 ```
 
-Once it's installed, run `/mcp` to confirm `google-developer-knowledge` shows up as connected and lists its tools. If it doesn't appear, restart Antigravity and check again.
+Once it's installed, run `/mcp` to confirm `google-developer-knowledge` was correctly installed:
 
-## Verify everything
+![](images/verify-developer-mcp.png)
 
-Now run the setup skill — this is the single authoritative check before you build:
+## Verify your setup
+
+To verify our setup, tell AGY to:
 
 ```
-Check my setup.
+Verify my setup.
 ```
 
-It verifies (and fixes) the things that quietly break the rest of the lab: that you're signed into Antigravity with your **lab account** (not a personal Google login), that your Qwiklabs **project is set and pinned** (it'll ask you for your Project ID if needed), that both `gcloud auth login` **and** `gcloud auth application-default login` have run, that the API is enabled, and that your identity has the right role. Fix anything it flags before moving on.
+This invokes the `troubleshoot-lab-setup` skill we downloaded earlier from Github  to confirm your environment is set up correctly.
+
+![](images/verify-setup.png)
 
 ---
 
 # Build Your First Agent
 
-Building a starter agent is simple. Just tell Antigravity what kind of agent you want to build:
+Later in this lab, you'll design your own bespoke agentic application. But for now, let's build and test a basic agent together.  Tell AGY to build a basic agent and run it locally.
 
 ```
-Use agents-cli to build a simple agent. Make sure to enable sessions and memory.
+Use agents-cli to build a simple agent I can test and run it locally.
 ```
 
-Or, for our specific example:
+<!-- > **What are Sessions and Memory?**
+> - A **Session** is a single conversation thread — the messages exchanged, plus a little scratch data (*state*) the agent tracks *during that chat*. 
+> - **Memory** are bits of data an agent can save an look up *across* sessions (e.g. "this customer is gluten-free"). It lives in its own  searchable store — the managed option is **Vertex AI Memory Bank** — and you turn it on explicitly (we do this in Part 2). -->
 
-```
-Use agents-cli to build me an "Alchemist's Apothecary" agent — a shopkeeper for a magical potions shop — that I can test and run locally. Make sure to have sessions and memory enabled.
-```
+When it's done, AGY should produce something like:
 
-> 🖼️ **SCREENSHOT NEEDED** — Antigravity scaffolding your first agent (the agents-cli output showing the agent has been created).
-
-Tip: If you navigate away from your terminal and AGY gets shut, you can always access past sessions by opening AGY again and running `/resume`.
+![Antigravity scaffolding your first agent — the agents-cli output showing the agent has been created](images/scaffold.png)
 
 Behind the scenes, `agents-cli` scaffolds a complete ADK project for you: a Python agent definition, its configuration, and the local run/playground setup — all the boilerplate you'd otherwise write by hand — so you can go straight to shaping your agent's behavior.
+
+> Tip: If you navigate away from your terminal and AGY exists, you can always access past sessions by opening AGY again and running `/resume`.
 
 When it's done, we can tell AGY to test our agent from the command line:
 
 ```
-Test my agent with the message, "What potions do you have in stock?"
+Test my agent with the message, "Tell me a joke about a lemon."
 ```
-
 
 ## The Playground
 
-We can also test our agent in the **Playground** — a local, browser-based chat interface. Beyond just chatting, it gives you visibility into how your agent actually works: you can inspect **sessions**, step through the **traces** of each turn, and debug the tool calls and responses behind every answer.
+We can also test our agent in the **Playground** — a local, browser-based chat interface. Beyond just chatting, it gives us visibility into how our agent actually works: we can inspect **sessions**, step through the **traces** of each turn, and debug the tool calls and responses behind every answer. Tell AGY to:
 
 ```
 Launch agent playground for me.
 ```
 
+Antigravity will launch Playground on a local port. Access it by clicking the "Open Preview" button in the lower right hand side of the screen:
 
-> 🖼️ **SCREENSHOT NEEDED** — The agent playground launching.
+![](images/playground-port.png)
 
-> 🖼️ **SCREENSHOT NEEDED** — The playground startup menu with the numbered options; call out **option 3**. (Select 3 to speed up development.)
+![The agent playground launching](images/playground-launch.png)
 
-agents-cli may ask some clarifying questions to get started:
+Here you can chat with our agent from a UI. On the left hand side of the screen, we can see what tools our agent has access to. Depending on how you told AGY to create an agent, your agent may have some basic tools (in this case, `get_weather`). These are blocks of deterministic, functional code your agent can call to complete tasks. We'll add more later.
 
-> 🖼️ **SCREENSHOT NEEDED** — agents-cli asking its clarifying setup questions.
+![](images/playground-simple.png)
 
-When prompted, select:
+In the `Traces` tab, we can see the exact sequence of actions our agent took before producing a reply:
+![](images/playground-trace.png)
 
-> 🖼️ **SCREENSHOT NEEDED** — The selection prompt showing which option to choose.
+On the top bar of the screen, we can view our existing sessions and create new ones. 
+![](images/playground-session.png)
 
-## Tour the Playground
+**Sessions** consist of the log of messages in a current conversation, as well as a scratchpad of temporary state which can view in the state tab:
+![](images/playground-state.png)
 
-The Playground is where a lot of this workshop's core concepts become *visible*. Chat with your agent, then walk through the panels — each one maps to a concept you'll use later.
+## Deploy to Agent Platform
 
-> 🎤 **Presenter note — slow down here.** The Playground UI is the most concrete way to explain sessions, state, artifacts, traces, and evaluation, because you can point at each on screen. Walk the panels below in order; you'll need ~one slide at most. The "breakpoint" at the end teases the two things that *aren't* here by default — memory and external storage — which sets up Part 2.
+Deploying our agent to Google Cloud is as simple as telling Antigravity to deploy our agent to Agent Platform:
 
-### Sessions & state
+```Deploy my agent to agent platform.```
 
-Chat with your agent, then open the **Sessions** view and the **State** panel.
+![](images/agent-deploy.png)
 
-> 🎤 **Presenter note — session vs. state (the confusing one):**
-> - A **session** is a single conversation thread: its chronological messages/actions (*events*) plus a little scratch data (*state*). The Sessions view lets you see and switch threads.
-> - **State** (the State panel) is that scratch data — a key-value dictionary belonging to the *current session*. It's "what the agent is tracking during this chat" (e.g., items in a cart, a preference the user just mentioned).
-> - So **state is part of a session**, not a separate thing. Locally, sessions and state live **in memory**, so they **reset when the Playground restarts** — fine for testing.
-> - *(Optional/advanced: state keys can be prefixed — `user:` persists across a user's sessions, `app:` is shared app-wide — but you don't need that today.)*
+This could take a minute. When your agent is finally deployed, you'll be able to view it Agent Platform:
 
-### Artifacts
+![](images/view-deployment-1.png)
+![](images/view-deployment-2.png)
+![](images/view-deployment-3.png)
 
-> 🎤 **Presenter note — artifacts:** The **Artifacts** panel shows files/blobs the agent produced or was handed — images, documents, generated media. They're stored separately from state (binary data would bloat it); state just holds a reference. **Locally they're in-memory and vanish on restart; to make them durable you back the ArtifactService with a Cloud Storage (GCS) bucket** — i.e. swap `InMemoryArtifactService` → `GcsArtifactService`. (Same pattern as sessions: local = ephemeral, production = pick a durable backend.) This is where generated images/videos will appear once we add generative tools in Part 2.
-
-### Traces
-
-Open the **Traces** tab and look at what your last message actually did.
-
-> 🎤 **Presenter note — traces → tools:** Right now a trace is boring — a single direct **LLM call**, because the agent can only talk. That's the perfect jumping-off point to introduce **tools**: functions the agent can call to *do* things. Once we add tools in Part 2, each tool call shows up here, and this tab becomes how you debug what the agent actually did.
-
-> 🖼️ **SCREENSHOT NEEDED** — The Traces tab showing a single direct LLM call (no tools yet).
-
-### Evaluation
-
-> 🎤 **Presenter note — evals (brief):** Point out that the **evaluation** panel exists — it's how you measure whether responses are actually good. Just name it here; we do it hands-on in Part 2.
-
-## The breakpoint — what's *not* here by default
-
-The Playground showed you the parts of an agent that are on by default. A few important kinds of persistence are **not** — and they're exactly what you'll add to your own agent. It helps to think in two axes: **structured vs. binary** data, and **conversation-scoped vs. owned by your app**.
-
-| Kind of state | What it holds | On by default? |
-| --- | --- | --- |
-| **Session** (events + **state**) | The current conversation (text/scratch) | ✅ Yes — you just saw it |
-| **Artifacts** | Binary files the agent makes/uses (this session or user) | ✅ Yes — the Artifacts panel |
-| **Memory** | Long-term facts, searchable *across* sessions | ❌ No — you enable it |
-| **External storage** (Firebase / Cloud SQL) | *Your app's* structured data (inventory, orders) | ❌ No — you wire it up |
-| **Blob storage** (Cloud Storage / GCS) | *Your app's* raw files (bulk/static assets) | ❌ No — you wire it up |
-
-> 🎤 **Presenter note — memory vs. storage (the second confusing one):**
-> - **Memory** is a *searchable, cross-session* store — how the agent recalls something from a *previous* conversation. Different from session state (state is this-conversation-only), and **not enabled by default**.
-> - **External storage** (Firebase, Cloud SQL) is *your application's own database* — the domain data your agent reads and writes (the shop's inventory, a user's orders). It isn't an ADK conversation construct at all; it's your app's source of truth.
-> - The one-liner: **sessions/state/artifacts are about the *conversation*; memory and external storage are about everything that outlives it.**
-
-> 🎤 **Presenter note — artifacts vs. blob storage (they're related!):**
-> - **Artifacts *are* blob data.** Under the hood, persistent artifacts are stored in **Cloud Storage (GCS)** — so the difference is the *interface*, not the storage. Artifacts are ADK's agent-aware wrapper: versioned, scoped to a session or user, saved/loaded by the agent during a turn, and visible in the Playground.
-> - **Raw blob storage (GCS)** is just a bucket of objects your *app* controls directly — best for files *not* tied to a conversation (a static catalog of product images, public assets your frontend serves, bulk uploads).
-> - Rule of thumb: if the **agent** produces/consumes the file as part of its work → **artifact**. If it's your **app's** own file library → **blob storage**.
-> - Clean parallel: **artifacts : blob storage :: session state : Cloud SQL** — in each pair, the first is conversation-scoped and agent-managed, the second is your app's own store.
+Clicking in, we can see the extended toolsuite availible for monitoring our agent in production:
+![](images/view-deployment-4.png)
 
 
-> 🎤 **Show off finished demo, maybe video here**
-> 🎤 **Presenter note — payoff beat:** Demo the finished Apothecary here — a tool call, an Omni-generated image/video, an A2UI card or table. They built the bare version live at the start; now they see the fully productionized one they'll head toward. This previews the Part-2 capabilities (tools, generative media, compute, rich UI) without lecturing them.
+# Design Your Own Agentic Application
 
-> 🖼️ **SCREENSHOT / DEMO** — The finished Apothecary doing something impressive (tool call + generated media + a card or table).
+So far we've built and deployed an extremely simple agent--basically, a chatbot. In this next section, we'll augment our agent with capabilities like:
+- Calling tools (i.e. running code, calling an API, interacting with a database)
+- Conversation Memory (for storing information about a user between sessions)
+- Database/blob storage access for external application data (i.e. users, product inventory, images)
+- The ability to generate images, video, and music
+- A snazzy frontend
 
-## Now it's your turn
+Now's a good spot to pause and decide what kind of agentic application you'd like to build. It doesn't have to be complicated — a good workshop project is one narrow task with a bit of data behind it. For example:
 
-You've built the bare Apothecary and seen where it can go. Time to pick what *you'll* build for the rest of the lab.
+- A **recipe assistant** that suggests meals from ingredients you have on hand and saves your favorites.
+- A **book concierge** that recommends titles, tracks your reading list, and generates cover art.
+- A **workout coach** that builds a plan, logs your sessions, and charts your progress.
+- A **travel planner** that assembles an itinerary and illustrates each destination.
+- A **plant-care helper** that tracks your plants, reminds you when to water, and diagnoses problems from a photo.
 
-> **Pick your project.** If you haven't already (from the intro), ask AGY:
->
-> ```
-> Help me pick a project.
-> ```
->
-> It hands you a short project brief — including a first "what does *good* look like?" question you'll reuse at evaluation time. **Everything from here on, you do for *your* agent.**
+Notice these all share the same shape you'll build here: a conversation, some stored data, a tool or two, and generated media — the same ingredients as the Apothecary.
+
+Once you have a basic idea (or if you need help coming up with one), ask AGY for help designing your agentic application. 
+This will invoke a custom skill to help ensure you're planning to build an application that fits with the skills and
+software taught in this lab. In AGY:
+
+```Help me design an old-timey apothecary agent that sells tinctures and potions```.
+
 
 ---
 
-# Augment Your Agent
-
-*This is where Part 2 begins — you're now productionizing your **own** agent.*
-
-The stations in this section are a **menu, not a checklist.** Add the capabilities your agent actually needs and skip the rest — a simple Q&A agent might need none of them; a rich app may want them all. Each station is self-contained, so **jump around** based on what *your* agent calls for. Where we show an Apothecary example, do the equivalent for your domain.
-
----
 
 ## Long-Term Memory
 
 Right now your agent forgets everything the moment a session ends. Prove it: start a fresh session and ask it to recall something from an earlier chat — it can't.
 
-> 🖼️ **SCREENSHOT NEEDED** — A fresh session where the agent fails to recall a fact from a previous conversation.
+![A fresh session where the agent fails to recall a fact from a previous conversation](images/memory-forgets.png)
 
 **Long-term memory** fixes this. In ADK, memory is a searchable, cross-session store provided by a `MemoryService`; the managed option is **Vertex AI Memory Bank**, which uses Gemini to extract durable facts (e.g. "this customer prefers calming potions") and recall them later. Turn it on:
 
@@ -421,13 +422,15 @@ Earlier, we talked about three kinds of conversational storage: **sessions**, **
 - **Structured data** (inventory, orders, user records) → a database like **Firestore** (serverless, simple) or **Cloud SQL**. Your agent reaches it through a **function tool** (see *Add Tools*).
 - **Raw files/blobs** (bulk images, static assets) → **Cloud Storage (GCS)**. *(Files the agent produces during a conversation should be **artifacts** instead — which are themselves backed by GCS.)*
 
-For our Apothecary, we'll create a database to store inventory. We'll use **Firestore** (though you could swap in Cloud SQL or Spanner).
+For our Apothecary, we'll create a simple key-value database to store inventory. We'll use **Firestore** because it's lightweight and has a convenient browser interface.
 
-First, give Antigravity the ability to manage Firebase by installing the **Firebase MCP**:
+First, give **Antigravity** (your coding agent) the ability to manage Firestore by connecting it to the **Firestore MCP server**. This is a remote MCP server (no install — it's enabled when the Firestore API is on) that lets AGY create databases, seed documents, and read/write collections for you:
 
 ```
-Install the Firebase MCP so you can create and manage a Firestore database for me.
+Follow this guide to connect to the Firestore MCP server: https://docs.cloud.google.com/firestore/native/docs/use-firestore-mcp
 ```
+
+> **Which MCP — and who uses it?** This is the **Firestore** MCP (remote, `https://firestore.googleapis.com/mcp`), not the broader Firebase CLI MCP. We give it to **AGY** so it can *build* your backend — stand up the database and generate the code. Your **deployed** agent won't use this MCP at runtime; it reaches Firestore through **function tools** AGY writes for it (see *Add Tools*). That keeps the running agent's data access explicit and under your control rather than handing it a general-purpose database MCP.
 
 Then have it stand up a Firestore backend, describe the schema at a high level, and wire it to your agent with function tools:
 
@@ -441,7 +444,7 @@ Test it: ask the agent something only its data can answer — for the Apothecary
 
 You can watch the data live in the **Firebase console → Firestore Database**. A nice property of Firestore is that it's **real-time**: as your agent writes (say, selling a potion decrements stock), the document updates instantly in the browser — great for live demos and debugging.
 
-> 🖼️ **SCREENSHOT NEEDED** — The Firestore data viewer in the Firebase console showing the seeded "potions" collection.
+![The Firestore data viewer in the Firebase console showing the seeded potions collection](images/firestore-potions.png)
 
 ---
 
@@ -497,7 +500,7 @@ Generate a pixel-art image for the "Draught of Living Death" potion and attach i
 
 Behind the scenes, Omni generates the image, it's saved to **GCS** (blob storage), and its URL is linked from the potion's **Firestore** record — so your frontend can display it later. (It'll also appear in the **Artifacts** panel.)
 
-> 🖼️ **SCREENSHOT NEEDED** — A generated pixel-art potion image shown alongside its Firestore record.
+![A generated pixel-art potion image shown alongside its Firestore record](images/omni-potion-firestore.png)
 
 **Music with Lyria.** For ambience, Google's **Lyria** model generates music — give your shop a soundtrack:
 
@@ -549,7 +552,7 @@ When it finishes, agents-cli writes the deployment details, including your agent
 
 Now that it's deployed, open your agent in the Cloud Console. Click into it and explore — you can see the deployed **traces** here, just like the local Traces tab in Part 1, but for real invocations against the deployed agent.
 
-> 🖼️ **SCREENSHOT NEEDED** — The deployed agent in the Cloud Console, with the traces view.
+![The deployed agent in the Cloud Console, with the traces view](images/console-traces.png)
 
 > ⚠️ **TODO:** Add the steps for finding the agent in the Console, clicking through traces, and confirming you can reach it. Cover the basics of accessing the deployed agent (resource name, identity).
 
@@ -664,6 +667,16 @@ See: [https://google.github.io/agents-cli/guide/evaluation/](https://google.gith
     const html = marked.parse(cleaned, { gfm: true, breaks: false });
     const content = document.getElementById("content");
     content.innerHTML = html;
+
+    // Missing screenshots -> clean "pending" placeholder instead of a broken-image icon
+    content.querySelectorAll("img").forEach(img => {
+      img.addEventListener("error", () => {
+        const d = document.createElement("div");
+        d.className = "img-pending";
+        d.textContent = "📷 screenshot pending: " + (img.getAttribute("alt") || img.getAttribute("src"));
+        img.replaceWith(d);
+      });
+    });
 
     // Flag placeholder callouts so they stand out from real ones
     content.querySelectorAll("blockquote").forEach(bq => {
