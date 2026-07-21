@@ -473,35 +473,42 @@ Test it by asking a question that requires real computation or analysis, like fi
 
 Of course, you are able to update your tool instructions from the last section to use the sandbox as well. For folks who are building agents for things like auto-trading or coding, this is a super useful feature to incorporate into your agent.
 
-# Building a Frontend
+# Enrich Responses with A2UI
 
-Your agent needs a face — an interface people can use to talk to it. We don't hand you a pre-built frontend; instead, ask AGY to build one for you. This invokes the `build-a2ui-frontend` skill, which scaffolds an agent-agnostic FastAPI proxy + chat UI into a `frontend/` folder: the browser only ever talks to the proxy (same origin, no CORS), and the proxy authenticates to your deployed agent with Application Default Credentials. To point it at your agent you set one env var.
+While text is fine, your agent can do better using the power of A2UI. A2UI lets it return real UI, such as cards, forms, charts, and tables. Your agent emits structured JSON (a declarative description of the UI), and a renderer turns it into interactive components. A2UI is open source and easy to implement into any agent built with ADK.
 
-Ask AGY to build it:
-
-```bash
-Build me a web frontend for my deployed agent and wire it to my agent using AGENT_ENGINE_RESOURCE_NAME.
-```
-
-(If your scaffolded project already includes a web frontend, tell AGY to adapt that one instead of creating a new one.)
-
-## A2UI
-
-While text is fine, your agent can do better using the power of A2UI. A2UI lets it return real UI, such as cards, forms, charts, and tables. Your agent emits structured JSON (a declarative description of the UI), and a renderer on the client turns it into interactive components. A2UI is open source and easy to implement into any agent built with ADK.
-
-First, turn it on for your agent:
+This is an **agent-side** capability, so turn it on the same way you added your other features — and test it right in the playground:
 
 ```bash
 Add A2UI to my agent with the a2ui-agent-sdk and the Basic Catalog: build the system prompt with A2uiSchemaManager (allow Card, Table, Text, Image, and Button), and validate the model's output with parse_response_to_parts before returning it.
 ```
 
-The ADK playground renders A2UI out of the box. Ask for something that fits a card or table and watch the widget appear. Your agent should return a valid A2UI JSON payload (wrapped with the application/json+a2ui MIME type). For example, if you're building a marketplace agent: "Show me all the items you have in stock" (should render a table) or "Give me the details for this item" (a card). Adapt to whatever your agent knows about.
+The ADK playground **renders A2UI out of the box — no frontend needed yet.** Ask for something that fits a card or table and watch the widget appear. Your agent should return a valid A2UI JSON payload (wrapped with the application/json+a2ui MIME type). For example, if you're building a marketplace agent: "Show me all the items you have in stock" (should render a table) or "Give me the details for this item" (a card). Adapt to whatever your agent knows about.
 
-The frontend AGY built from the skill already detects and renders A2UI payloads out of the box, so once your agent emits them, they'll show up. If you're adapting a frontend that doesn't handle A2UI yet, tell AGY to add it:
+# Building a Frontend
+
+Up to now you've tested everything in the ADK playground — that's been your agent's "face" while you built out storage, tools, media, and A2UI. For the finale, let's give your agent a shareable web face and ship it to the cloud.
+
+## Redeploy your finished agent
+
+Your agent has grown a lot since you first deployed it — it now has storage, tools, media generation, a sandbox, and A2UI, **none of which are in that original deployment.** Before wiring up a frontend, push the latest version to Agent Platform so the frontend talks to the real, fully-featured agent:
 
 ```bash
-Update the frontend to detect A2UI payloads (mimeType application/json+a2ui) and render them, falling back to plain text for normal replies.
+Redeploy my agent to Agent Platform.
 ```
+
+Grab the resource name from the fresh `deployment_metadata.json` — you'll point the frontend at it in a moment.
+
+## Build the frontend
+
+We don't hand you a pre-built frontend; instead, ask AGY to build a **minimal** one for you. This invokes the `build-a2ui-frontend` skill, which copies an agent-agnostic FastAPI proxy + chat UI into a `frontend/` folder: the browser only ever talks to the proxy (same origin, no CORS), and the proxy authenticates to your deployed agent with Application Default Credentials. It already detects and renders A2UI payloads, so the cards and tables you saw in the playground show up here too.
+
+```bash
+Using the build-a2ui-frontend skill, copy its minimal FastAPI proxy + chat UI template into ./frontend and wire it to my deployed agent with AGENT_ENGINE_RESOURCE_NAME. Keep it minimal — do not build a full React app or pull in a large sample frontend.
+```
+
+(If your project already has a web frontend you'd rather keep, tell AGY to adapt *that* one to the same proxy + A2UI pattern instead of creating a new one.)
+
 ## Test Locally
 
 Before deploying the frontend, confirm that your code can reach your agent that is currently deployed on Agent Platform. Locally just means the frontend server runs on your current machine, instead of Cloud Run, but it still talks to the same endpoint as if it was deployed on Cloud Run. This is to ensure that we don’t face any wiring issues before we deploy to Cloud Run, and that the endpoint is actually live and working properly.
@@ -512,7 +519,7 @@ Run all of these from the frontend/ folder. First time only, install its depende
 pip install -r requirements.txt
 ```
 
-1. Tell the frontend which agent it should talk to by pointing it at the resource name from your deploy step (This is the ID you got when you finished deploying to Agent Platform):
+1. Tell the frontend which agent it should talk to by pointing it at the resource name from the redeploy you just did (from the fresh `deployment_metadata.json`):
 
 ```bash
 export AGENT_ENGINE_RESOURCE_NAME="<paste the resource name from deployment_metadata.json>"
