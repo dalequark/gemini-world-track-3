@@ -1,6 +1,6 @@
 ---
 name: pick-your-agent-project
-description: Interactively help a workshop participant decide what agent to build. Use when the user is choosing a project, brainstorming an agent idea, says "I don't know what to build" or "what should I make", or wants to check whether their idea will actually exercise the workshop's Google tools (memory/sessions, function tools, storage + A2UI, image generation, code sandbox, evaluation). Guides a domain choice and a tool-coverage gut-check, then writes a short project brief. Don't use for implementing or coding the agent itself.
+description: Interactively help a workshop participant decide on and design what agent to build. Use when the user is choosing a project, brainstorming an agent idea, says "I don't know what to build" or "what should I make", OR asks to design/plan/"help me design"/"help me make"/"help me build" a specific agent idea (e.g. "help me design a travel planner agent", "help me make a recipe assistant", "design my agentic application") BEFORE any code is scaffolded — this is the planning/brief step, not implementation. Also use when they want to check whether their idea will actually exercise the workshop's Google tools (memory/sessions, function tools, storage + A2UI, image generation, code sandbox, evaluation). Guides a domain choice and a tool-coverage gut-check, then writes a short project brief. Don't use for implementing or coding the agent itself (that comes after the brief).
 ---
 
 # Pick your agent project

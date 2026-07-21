@@ -1,6 +1,18 @@
 ---
 name: troubleshoot-lab-setup
-description: Verify the Gemini World lab environment is set up correctly, and diagnose/fix common errors. Use at the START of the lab right after logging in to confirm everything is ready ("check my setup", "am I ready to start", "verify my environment", "did I log in correctly"), AND whenever the user hits an error and doesn't know why — permission denied / 403 / PERMISSION_DENIED, "API not enabled", a deploy that fails, the frontend can't reach the agent, /chat errors, code sandbox failures, image generation failures, or a vague "it's not working". Checks the usual culprits: signed into Antigravity with the right account (GCP/lab flow, not personal Google login), the GCP project is set, both gcloud auth login and application-default login have run, the API is enabled, and the identity has roles/aiplatform.user. Don't use for writing agent features or non-error build questions.
+description: >-
+  Verify the Gemini World lab environment is set up correctly, and diagnose/fix
+  common errors. Use at the START of the lab right after logging in to confirm
+  everything is ready ("check my setup", "am I ready to start", "verify my
+  environment", "did I log in correctly"), AND whenever the user hits an error and
+  doesn't know why — permission denied / 403 / PERMISSION_DENIED, "API not
+  enabled", a deploy that fails, the frontend can't reach the agent, /chat errors,
+  code sandbox failures, image generation failures, or a vague "it's not working".
+  Checks the usual culprits — signed into Antigravity with the right account
+  (GCP/lab flow, not personal Google login), the GCP project is set, both
+  gcloud auth login and application-default login have run, the API is enabled,
+  and the identity has roles/aiplatform.user. Don't use for writing agent features
+  or non-error build questions.
 ---
 
 # Troubleshoot the lab setup
