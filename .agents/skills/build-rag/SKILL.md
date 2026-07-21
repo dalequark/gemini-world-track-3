@@ -1,6 +1,6 @@
 ---
 name: rag-engine-setup
-description:
+description: >
   Set up a Vertex AI RAG Engine corpus (Agent Platform) in serverless mode and
   wire it into an ADK agent. Use when the user wants to "create a RAG corpus",
   "build a RAG store", "ground my agent on documents", "add retrieval to my
@@ -167,6 +167,24 @@ At runtime the model decides when to call `retrieve_herbal_lore`; ADK executes
 `retrieval_query` against the corpus, feeds the top-k chunks back into the model,
 and the model composes a grounded answer. The `description` matters — it's how the
 model knows when to reach for the tool.
+
+**Region gotcha (common in production):** a serverless corpus is `us-central1`
+only, but your agent's model often runs elsewhere (e.g. `GOOGLE_CLOUD_LOCATION=global`).
+`VertexAiRagRetrieval` runs `retrieval_query` against whatever region the
+**aiplatform SDK** is initialized to — if that's not the corpus's region you get
+`MethodNotImplemented / 404`. The genai model client (env-based) and ADK
+session/memory services (explicit `location=`) do NOT use the aiplatform SDK's
+initializer, so you can safely pin just the RAG client to the corpus region:
+
+```python
+import vertexai
+# region parsed from projects/<p>/locations/<region>/ragCorpora/<id>
+vertexai.init(project="...", location="us-central1")  # before building the tool
+```
+
+To steer the model on *how* to answer, put it in the agent instruction, e.g.:
+"When you rely on the Herbal's words, quote the passage verbatim in quotation
+marks and name it as Culpeper's Complete Herbal; otherwise paraphrase."
 
 **Alternative (Gemini native grounding, no ADK):** pass a retrieval tool straight
 to a `GenerativeModel` via `Tool.from_retrieval(rag.Retrieval(rag.VertexRagStore(...)))`.
