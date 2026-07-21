@@ -384,13 +384,17 @@ Now's a good spot to pause and decide what kind of agentic application you'd lik
 - A **travel planner** that assembles an itinerary and illustrates each destination.
 - A **plant-care helper** that tracks your plants, reminds you when to water, and diagnoses problems from a photo.
 
-Notice these all share the same shape you'll build here: a conversation, some stored data, a tool or two, and generated media — the same ingredients as the Apothecary.
+Notice these all share the same shape you'll build here: a conversation, some stored data, a tool or two, and generated media. Whatever you pick, it'll use those same ingredients.
 
-Once you have a basic idea (or if you need help coming up with one), ask AGY for help designing your agentic application. 
-This will invoke a custom skill to help ensure you're planning to build an application that fits with the skills and
-software taught in this lab. In AGY:
+Once you have a basic idea (or if you need help coming up with one), ask AGY for help designing your agentic application.
+This will invoke the `pick-your-agent-project` skill to help ensure you're planning to build an application that fits with the skills and
+software taught in this lab. In AGY, describe whatever you'd like to build — swap in your own idea:
 
-```Help me design an old-timey apothecary agent that sells tinctures and potions```.
+```
+Help me design my agentic application. I want to build a travel planner that assembles an itinerary and illustrates each destination.
+```
+
+(Any idea works — e.g. "Help me design a recipe assistant that suggests meals from what's in my fridge," or "Help me design an old-timey apothecary that sells tinctures and potions." If you're not sure yet, just say "Help me design my agentic application — I'm not sure what to build yet" and AGY will brainstorm with you.)
 
 AGY will help you brainstorm, and ask clarifying questions.
 
@@ -412,18 +416,19 @@ Let's start by implementing structured data in Firestore. First, let's equip Ant
 Install the Firebase MCP server.
 ```
 
-When that's done, ask AGY to give your agent a Firestore backend:
+When that's done, ask AGY to give your agent a Firestore backend. Describe a collection that fits whatever you're building — AGY can look at your project_brief.md and pick sensible fields. Adapt this prompt to your own domain:
 ```
-Give my agent a Firestore database with an "inventory" collection where each document has name, description, price, and stock. Add function tools so my agent can read and write it, and seed a few sample items.
+Give my agent a Firestore database with a collection that fits my app (look at my project_brief.md), where each document has a few sensible fields. Add function tools so my agent can read and write it, and seed a few sample items.
 ```
+For example, a store/marketplace agent might use an "inventory" collection with name, description, price, and stock; a travel agent might use a "destinations" collection; a recipe agent a "recipes" collection. Pick whatever suits your idea.
 
-In the Playground, we can verify this worked by asking the agent something it can only answer by querying the database, i.e. *"How many healing potions are in stock?"*.
+In the Playground, we can verify this worked by asking the agent something it can only answer by querying the database — adapt it to your domain (for a store: *"What items do you have in stock?"*; for a travel agent: *"What destinations do you know about?"*).
 
-You can watch the data live in the **Firebase console → Firestore Database**. A nice property of Firestore is that it's **real-time**: as your agent writes (say, selling a potion decrements stock), the document updates instantly in the browser. What's more, you can edit entries in the browser and see them reflected immediately in the agent.
+You can watch the data live in the **Firebase console → Firestore Database**. A nice property of Firestore is that it's **real-time**: as your agent writes (say, an action that updates a record), the document updates instantly in the browser. What's more, you can edit entries in the browser and see them reflected immediately in the agent.
 
 You can view the data in your Firestore database [here](https://console.cloud.google.com/firestore/databases/-default).
 
-![The Firestore data viewer in the Firebase console showing the seeded potions collection](images/firestore.png)
+![The Firestore data viewer in the Firebase console shows your seeded collection.](images/firestore.png)
 
 
 # Add Tools
@@ -446,13 +451,13 @@ Implement the tool we just discussed as a function tool and add it to my agent. 
 Test it in the agent playground or debug screen. Ask it to do something that the tool is able to do, and the agent should be able to call the tool. You should be able to confirm this trace in the logs. 
 
 # Generative AI (Omni)
-Tools can also give your agent the power of Google’s generative AI models. A great tool call you can use utilizes Google’s latest in multimodal image and video software, Omni, which allows your agent to create any visual assets for you.
+Tools can also give your agent the power of Google’s generative AI models. A great one to reach for is Omni (`gemini-omni-flash-preview`) — Google’s latest multimodal model for image, video, and text. Omni takes a short text prompt (optionally guided by a reference image) and generates a short video clip, so your agent can produce visual assets on demand. It runs in the `global` region. You can read about it here: https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/omni-flash-preview
 
 ```
-Add a tool that generates an image for an item in my agent's domain using Gemini's image generation model. It should take a short subject/description and return the image.
+Add a tool that generates a short video for an item in my agent's domain using Google's Omni model (model name gemini-omni-flash-preview) in the global region. See https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/omni-flash-preview. The tool should take a short subject/description and return the generated video. Use the Developer Knowledge MCP to confirm the exact API if you're unsure.
 ```
 
-Now ask your agent to generate an image for one of the items you might need. You should get back a real image. 
+Now ask your agent to generate a video for one of the items in your domain. You should get back a real video. 
 
 # Run Code in a Sandbox
 
@@ -470,19 +475,29 @@ Of course, you are able to update your tool instructions from the last section t
 
 # Building a Frontend
 
-Your agent needs a face, or an interface to interact with it. The workshop frontend that is provided to you is an agent-agnostic FastAPI proxy + chat UI: the browser only ever talks to the proxy (same origin, no CORS), and the proxy authenticates to your deployed agent with Application Default Credentials. To point it at your agent you set one env var; to reskin it you edit one config file.
+Your agent needs a face — an interface people can use to talk to it. We don't hand you a pre-built frontend; instead, ask AGY to build one for you. This invokes the `build-a2ui-frontend` skill, which scaffolds an agent-agnostic FastAPI proxy + chat UI into a `frontend/` folder: the browser only ever talks to the proxy (same origin, no CORS), and the proxy authenticates to your deployed agent with Application Default Credentials. To point it at your agent you set one env var.
+
+Ask AGY to build it:
+
+```bash
+Build me a web frontend for my deployed agent and wire it to my agent using AGENT_ENGINE_RESOURCE_NAME.
+```
+
+(If your scaffolded project already includes a web frontend, tell AGY to adapt that one instead of creating a new one.)
 
 ## A2UI
 
-While text is fine, your agent can do better using the power of A2UI. A2UI lets it return real UI, such as cards, forms, charts, tables. Your agent emits structured JSON (a declarative description of the UI), and a renderer on the client turns it into interactive components. A2UI is open source and easy to implement into any agent built with ADK.
+While text is fine, your agent can do better using the power of A2UI. A2UI lets it return real UI, such as cards, forms, charts, and tables. Your agent emits structured JSON (a declarative description of the UI), and a renderer on the client turns it into interactive components. A2UI is open source and easy to implement into any agent built with ADK.
 
-Turn it on for your agent:
+First, turn it on for your agent:
 
 ```bash
-Add A2UI to my agent with the a2ui-agent-sdk using the Basic Catalog. Generate the system prompt with A2uiSchemaManager and validate the model's output before returning it.
+Add A2UI to my agent with the a2ui-agent-sdk and the Basic Catalog: build the system prompt with A2uiSchemaManager (allow Card, Table, Text, Image, and Button), and validate the model's output with parse_response_to_parts before returning it.
 ```
 
-The ADK playground renders A2UI out of the box. Ask for something that fits a card or table and watch the widget appear. Your agent should return a valid A2UI JSON payload (wrapped with the application/json+a2ui type). For example, if you're building a marketplace agent: "Show me all the items you have in stock" (should render a table) or "Give me the details for this animal" (a card). Adapt to whatever your agent knows about.
+The ADK playground renders A2UI out of the box. Ask for something that fits a card or table and watch the widget appear. Your agent should return a valid A2UI JSON payload (wrapped with the application/json+a2ui MIME type). For example, if you're building a marketplace agent: "Show me all the items you have in stock" (should render a table) or "Give me the details for this item" (a card). Adapt to whatever your agent knows about.
+
+The frontend AGY built from the skill already detects and renders A2UI payloads out of the box, so once your agent emits them, they'll show up. If you're adapting a frontend that doesn't handle A2UI yet, tell AGY to add it:
 
 ```bash
 Update the frontend to detect A2UI payloads (mimeType application/json+a2ui) and render them, falling back to plain text for normal replies.
