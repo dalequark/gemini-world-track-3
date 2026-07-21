@@ -387,16 +387,11 @@ Now's a good spot to pause and decide what kind of agentic application you'd lik
 Notice these all share the same shape you'll build here: a conversation, some stored data, a tool or two, and generated media. Whatever you pick, it'll use those same ingredients.
 
 Once you have a basic idea (or if you need help coming up with one), ask AGY for help designing your agentic application.
-This will invoke the `pick-your-agent-project` skill to help ensure you're planning to build an application that fits with the skills and
-software taught in this lab. In AGY, describe whatever you'd like to build — swap in your own idea:
+This will invoke the `pick-your-agent-project` skill. In AGY, describe whatever you'd like to build, or swap in your own idea:
 
 ```
-Help me design my agentic application. I want to build a travel planner that assembles an itinerary and illustrates each destination.
+Help me design my agentic application. I need help brainstorming what specific agent to build.
 ```
-
-(Any idea works — e.g. "Help me design a recipe assistant that suggests meals from what's in my fridge," or "Help me design an old-timey apothecary that sells tinctures and potions." If you're not sure yet, just say "Help me design my agentic application — I'm not sure what to build yet" and AGY will brainstorm with you.)
-
-AGY will help you brainstorm, and ask clarifying questions.
 
 When you're done, AGY will output a `project_brief.md` file for your review. Edit it yourself or with AGY until you have something you like:
 ![](images/designbrief.png)
@@ -416,11 +411,13 @@ Let's start by implementing structured data in Firestore. First, let's equip Ant
 Install the Firebase MCP server.
 ```
 
-When that's done, ask AGY to give your agent a Firestore backend. Describe a collection that fits whatever you're building — AGY can look at your project_brief.md and pick sensible fields. Adapt this prompt to your own domain:
+When that's done, ask AGY to give your agent a Firestore backend. Describe a collection that fits whatever you're building. AGY can look at your project_brief.md and pick sensible fields. Adapt this prompt to your own domain:
+
 ```
 Give my agent a Firestore database with a collection that fits my app (look at my project_brief.md), where each document has a few sensible fields. Add function tools so my agent can read and write it, and seed a few sample items.
 ```
-For example, a store/marketplace agent might use an "inventory" collection with name, description, price, and stock; a travel agent might use a "destinations" collection; a recipe agent a "recipes" collection. Pick whatever suits your idea.
+
+For example, a store/marketplace agent might use an "inventory" collection with name, description, price, and stock; a travel agent might use a "destinations" collection; a recipe agent a "recipes" collection. 
 
 In the Playground, we can verify this worked by asking the agent something it can only answer by querying the database — adapt it to your domain (for a store: *"What items do you have in stock?"*; for a travel agent: *"What destinations do you know about?"*).
 
@@ -433,11 +430,9 @@ You can view the data in your Firestore database [here](https://console.cloud.go
 
 # Add Tools
 
-<!-- owner: Christina Zhu (cszhu@google.com) -->
-
 Right now, your agent can only talk. Tools are functions that your agent can use to actually do things and execute. Some tool examples are: looking up data from a database, taking an action (like sending an email), creating something. This is when your agent stops just being a chatbot and starts actually doing things.
 
-Every agent is different, so start by asking your coding AI assistant for tools that fit the agent you’ve decided to build:
+Every agent is different, so start by asking your coding AI assistant for tools that fit the agent you've decided to build:
 
 ```bash
 Look at the agent I'm building. Suggest 2–3 tools it could call to take real action or fetch real data, then recommend the simplest one to implement first.
@@ -451,17 +446,17 @@ Implement the tool we just discussed as a function tool and add it to my agent. 
 Test it in the agent playground or debug screen. Ask it to do something that the tool is able to do, and the agent should be able to call the tool. You should be able to confirm this trace in the logs. 
 
 # Generative AI (Omni)
-Tools can also give your agent the power of Google’s generative AI models. A great one to reach for is Omni (`gemini-omni-flash-preview`) — Google’s latest multimodal model for image, video, and text. Omni takes a short text prompt (optionally guided by a reference image) and generates a short video clip, so your agent can produce visual assets on demand. It runs in the `global` region. You can read about it here: https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/omni-flash-preview
+Tools can also give your agent the power of Google's generative AI models. A great one to reach for is Omni (`gemini-omni-flash-preview`), Google's latest multimodal model for image, video, and text. Omni takes a short text prompt (or a reference image) and generates a short video clip, so your agent can produce visual assets on demand. It runs in the `global` region. You can read about it here: https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/omni-flash-preview
 
 ```
-Add a tool that generates a short video for an item in my agent's domain using Google's Omni model (model name gemini-omni-flash-preview) in the global region. See https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/omni-flash-preview. The tool should take a short subject/description and return the generated video. Use the Developer Knowledge MCP to confirm the exact API if you're unsure.
+Add a tool that generates a short video for an item in my agent's domain using Google's Omni model (model name: gemini-omni-flash-preview) in the global region. See https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/omni-flash-preview. The tool should take a short subject/description and return the generated video. Use the Developer Knowledge MCP to confirm the exact API if you're unsure.
 ```
 
 Now ask your agent to generate a video for one of the items in your domain. You should get back a real video. 
 
 # Run Code in a Sandbox
 
-Some agents need to execute code — whether that’s for quick API calls, data analysis, or just doing math. Agent Platform offers code execution in an isolated sandbox, so your agent is able to code safely. Since the state persists across sessions and it doesn’t touch your host, it is a very safe way to run model-generated code, even in enterprise settings.
+Some agents need to execute code, whether that's for quick API calls, data analysis, or just doing math. Agent Platform offers code execution in an isolated sandbox, so your agent is able to code safely. Since the state persists across sessions and it doesn't touch your host, it is a very safe way to run model-generated code, even in enterprise settings.
 
 Prereqs: the Agent Platform API enabled, and your agent's identity has roles/aiplatform.user.
 
@@ -469,7 +464,7 @@ Prereqs: the Agent Platform API enabled, and your agent's identity has roles/aip
 Add Agent Platform code execution to my agent using AgentEngineSandboxCodeExecutor so it can safely run Python in a sandbox. If I don't already have a sandbox, create one from my agent engine resource.
 ```
 
-Test it by asking a question that requires real computation or analysis, like fizzbuzz, and  confirm the agent runs code in the sandbox and answers from the result. 
+Test it by asking a question that requires real computation or analysis, like fizzbuzz, and confirm the agent runs code in the sandbox and answers from the result.
 
 Of course, you are able to update your tool instructions from the last section to use the sandbox as well. For folks who are building agents for things like auto-trading or coding, this is a super useful feature to incorporate into your agent.
 
@@ -483,21 +478,21 @@ This is an **agent-side** capability, so turn it on the same way you added your 
 Add A2UI to my agent with the a2ui-agent-sdk and the Basic Catalog: build the system prompt with A2uiSchemaManager (allow Card, Table, Text, Image, and Button), and validate the model's output with parse_response_to_parts before returning it.
 ```
 
-The ADK playground **renders A2UI out of the box — no frontend needed yet.** Ask for something that fits a card or table and watch the widget appear. Your agent should return a valid A2UI JSON payload (wrapped with the application/json+a2ui MIME type). For example, if you're building a marketplace agent: "Show me all the items you have in stock" (should render a table) or "Give me the details for this item" (a card). Adapt to whatever your agent knows about.
+The ADK playground renders A2UI out of the box, so no frontend needed yet. Ask for something that fits a card or table and watch the widget appear. Your agent should return a valid A2UI JSON payload (wrapped with the application/json+a2ui MIME type). For example, if you're building a marketplace agent: "Show me all the items you have in stock" (should render a table) or "Give me the details for this item" (a card). Adapt to whatever your agent knows about.
 
 # Building a Frontend
 
-Up to now you've tested everything in the ADK playground — that's been your agent's "face" while you built out storage, tools, media, and A2UI. For the finale, let's give your agent a shareable web face and ship it to the cloud.
+Up to now you've tested everything in the ADK playground, and that's been your agent's "face" while you built out storage, tools, media, and A2UI. Now, let's give your agent a shareable web face and ship it to the cloud.
 
 ## Redeploy your finished agent
 
-Your agent has grown a lot since you first deployed it — it now has storage, tools, media generation, a sandbox, and A2UI, **none of which are in that original deployment.** Before wiring up a frontend, push the latest version to Agent Platform so the frontend talks to the real, fully-featured agent:
+Your agent has grown a lot since you first deployed it: it now has storage, tools, media generation, a sandbox, and A2UI, none of which are in that original deployment. Before wiring up a frontend, push the latest version to Agent Platform so the frontend talks to the  fully-featured agent:
 
 ```bash
 Redeploy my agent to Agent Platform.
 ```
 
-Grab the resource name from the fresh `deployment_metadata.json` — you'll point the frontend at it in a moment.
+Grab the resource name from the fresh `deployment_metadata.json`. You'll point the frontend at it in a moment.
 
 ## Build the frontend
 
@@ -511,7 +506,7 @@ Using the build-a2ui-frontend skill, copy its minimal FastAPI proxy + chat UI te
 
 ## Test Locally
 
-Before deploying the frontend, confirm that your code can reach your agent that is currently deployed on Agent Platform. Locally just means the frontend server runs on your current machine, instead of Cloud Run, but it still talks to the same endpoint as if it was deployed on Cloud Run. This is to ensure that we don’t face any wiring issues before we deploy to Cloud Run, and that the endpoint is actually live and working properly.
+Before deploying the frontend, confirm that your code can reach your agent that is currently deployed on Agent Platform. Locally just means the frontend server runs on your current machine, instead of Cloud Run, but it still talks to the same endpoint as if it was deployed on Cloud Run. This is to ensure that we don't face any wiring issues before we deploy to Cloud Run, and that the endpoint is actually live and working properly.
 
 Run all of these from the frontend/ folder. First time only, install its dependencies:
 
@@ -533,17 +528,17 @@ python main.py
 
 3. Open http://localhost:8080 on your web browser and you should see the UI that you built.
 
-4. Send a message and wait for a reply. Then, in the same chat, ask it “What did I just ask?” to ensure that everything is wired up correctly with a real session. If it can’t remember, then it isn’t working properly and you should check the resource deployment from the earlier step.
+4. Send a message and wait for a reply. Then, in the same chat, ask it “What did I just ask?” to ensure that everything is wired up correctly with a real session. If it can't remember, then it isn't working properly and you should check the resource deployment from the earlier step.
 
 ## Deploy to Cloud Run
-Finally, ship the frontend so anyone can use it. 
+Finally, ship the frontend so anyone can use it.
 
-Note that the frontend that we are shipping deploys differently from the agent. You used agents-cli to deploy the agent to Agent Platform, the frontend is a separate custom web app, so you need to ship that to Cloud Run with gcloud. Essentially, the agent lives in Agent Platform while the frontend lives in Cloud Run and talks to the agent. This is the recommended pattern for a custom UI. 
+Note that the frontend that we are shipping deploys differently from the agent. You used agents-cli to deploy the agent to Agent Platform, the frontend is a separate custom web app, so you need to ship that to Cloud Run with gcloud. Essentially, the agent lives in Agent Platform while the frontend lives in Cloud Run and talks to the agent. This is the recommended pattern for a custom UI.
 
-The Cloud Run service runs as a different service identity than you did locally, so its service account needs roles/aiplatform.user or /chat will error out:
+The Cloud Run service runs as a different service identity than you did locally, so its service account needs roles/aiplatform.user or /chat will error out.
 
 ```bash
-Deploy the frontend to Cloud Run pointing at my AGENT_ENGINE_RESOURCE_NAME, and grant the Cloud Run service account roles/aiplatform.user so it can reach the agent
+Deploy the frontend to Cloud Run pointing at my AGENT_ENGINE_RESOURCE_NAME, and grant the Cloud Run service account roles/aiplatform.user so it can reach the agent.
 ```
 
 Or run it directly:
