@@ -125,6 +125,12 @@ gcloud projects add-iam-policy-binding "$GOOGLE_CLOUD_PROJECT" \
   --role="roles/aiplatform.user"
 ```
 
+Match the role to what the calling identity actually *does*. A **deployed agent**
+runs as its own service account with **no Firestore/Cloud Storage access by
+default**, so any agent that reads Firestore must have `roles/datastore.user`
+granted to that service account — **grant it at deploy time** (see "After you
+deploy" below), not just `aiplatform.user` on your user.
+
 > Tip: if you have the **Developer Knowledge MCP** installed, use it to confirm
 > the exact API name, role, and command for a given product instead of guessing.
 
@@ -146,6 +152,24 @@ first, then enable.
 3. Re-read the actual error; if it names a permission, go to #4.
 List existing deployments to see current state: `agents-cli deploy --list`.
 
+### After you deploy: grant the agent's service account the roles its tools need
+Do this as part of **every** deploy where the agent reads Firestore or Cloud
+Storage — proactively, don't wait for it to fail. The deployed agent runs as its
+own service account (by default the Reasoning Engine service agent,
+`service-PROJECT_NUMBER@gcp-sa-aiplatform-re.iam.gserviceaccount.com`) which has
+**no data-access roles by default**. For a Firestore-backed agent, grant it
+`roles/datastore.user` (this auto-fills your project number):
+
+```bash
+gcloud projects add-iam-policy-binding "$GOOGLE_CLOUD_PROJECT" \
+  --member="serviceAccount:service-$(gcloud projects describe "$GOOGLE_CLOUD_PROJECT" --format='value(projectNumber)')@gcp-sa-aiplatform-re.iam.gserviceaccount.com" \
+  --role="roles/datastore.user"
+```
+
+(A Cloud Storage tool needs a storage role like `roles/storage.objectViewer`.)
+Also make sure you **seeded your data in the same project you deployed to** —
+otherwise the deployed agent reads an empty database.
+
 ### Frontend can't reach the agent / no reply / errors on send
 Run all frontend commands from the `frontend/` folder.
 1. Dependencies installed? `pip install -r requirements.txt`
@@ -158,6 +182,36 @@ Run all frontend commands from the `frontend/` folder.
 3. ADC present locally? (#2)
 4. Sanity test: send a message, then ask "What did I just ask?" — if it can't
    remember, the wiring to the deployed agent is wrong, not the UI.
+5. If plain-text replies work but **tool-backed answers return nothing**, it's not
+   the UI — see "Deployed agent gives no reply" below.
+
+### Deployed agent gives no reply / a tool works in the Playground but not deployed
+A Firestore-backed tool works in the Playground (your local ADC) but the deployed
+agent's turn dies with no reply. You almost certainly hit one of:
+
+1. **You skipped the role grant.** Do "After you deploy" above — the deployed
+   service account needs `roles/datastore.user`.
+2. **You seeded and deployed in different projects.** The deployed agent reads
+   Firestore from *its own* project; if you seeded elsewhere it sees an empty DB.
+   Compare and re-seed into the deploy project if they differ:
+   ```bash
+   gcloud config get-value project          # where you seeded from
+   echo "$AGENT_ENGINE_RESOURCE_NAME"        # the project the agent runs in
+   ```
+
+Confirm the Firestore DB exists and has data in the deploy project (Firebase
+console), then re-test. A silent hang = wrong/empty project; `PERMISSION_DENIED`
+= missing role.
+
+### `NotFound: The database (default) does not exist` (deployed Firestore agent)
+Your code is building the Firestore client from the project **number**, not the
+ID. On Agent Engine `google.auth.default()` returns the project *number*, but
+Firestore only resolves the `(default)` database by project **ID**. Pin the ID:
+```python
+db = firestore.Client(project="<your-project-id>")   # the ID, NOT the number
+```
+Don't derive it from `google.auth.default()`; use the same ID in your seed script,
+then **redeploy**. (It works locally because your ADC returns the ID.)
 
 ### `/chat` errors after deploying the frontend to Cloud Run
 The Cloud Run service runs as a **different identity** than your local user, so
