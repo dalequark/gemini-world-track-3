@@ -53,13 +53,6 @@ const log = document.getElementById("log");
 const form = document.getElementById("form");
 const input = document.getElementById("input");
 
-// A stable per-browser id so each visitor gets their own agent session and
-// memory. Without this the proxy falls back to a single shared "web-user",
-// meaning every visitor shares one conversation. Swap in a real signed-in
-// user id here if you add auth.
-const userId = localStorage.getItem("uid") || crypto.randomUUID();
-localStorage.setItem("uid", userId);
-
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
 function bubble(who) {
@@ -197,7 +190,7 @@ form.addEventListener("submit", async (ev) => {
   input.value = "";
   const b = bubble("agent"); b.textContent = "…";
   try {
-    const res = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text, user_id: userId }) });
+    const res = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
     const data = await res.json();
     renderReply(b, data.parts || []);
   } catch (e) {
