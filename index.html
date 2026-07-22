@@ -596,8 +596,6 @@ Using the build-agent-frontend skill, copy its minimal FastAPI proxy and chat UI
 
 (If your project already has a web frontend you'd rather keep, tell AGY to adapt that one to the same proxy pattern instead of creating a new one.)
 
-> **A note on user identity.** The template gives each browser a stable `user_id` (a random id saved in `localStorage`) and sends it with every message, so each visitor gets their own agent session — and their own [Memory Bank](#adding-memory). For a real multi-user app, replace the `localStorage` id with your signed-in user's id.
-
 ## Test Locally
 
 Before deploying the frontend, confirm that your code can reach your agent that is currently deployed on Agent Platform. Locally just means the frontend server runs on your current machine, instead of Cloud Run, but it still talks to the same endpoint as if it was deployed on Cloud Run. This is to ensure that we don't face any wiring issues before we deploy to Cloud Run, and that the endpoint is actually live and working properly.
