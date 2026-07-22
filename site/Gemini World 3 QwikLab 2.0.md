@@ -304,7 +304,7 @@ Under the hood, the corpus is built once — your documents are chunked, embedde
 
 To try this out, find or create a reference document. A .txt file is simplest. We'll use an [old-timey medical guide](https://www.gutenberg.org/cache/epub/49513/pg49513.txt) from Project Gutenberg. First upload your document:
 
-![Uploading the reference document](images/upload-file.png)
+![Uploading the reference document](images/upload_file.png)
 
 Now ask AGY to build the corpus and wire retrieval into your agent. This uses the `rag-engine-setup` skill, which creates a **serverless** RAG corpus (the cheapest, no-allowlist option) and adds the retrieval tool for you:
 
