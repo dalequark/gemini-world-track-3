@@ -163,6 +163,22 @@ On the top bar of the screen, we can view our existing sessions and create new o
 **Sessions** consist of the log of messages in a current conversation, as well as a scratchpad of temporary state which can view in the state tab:
 ![](images/playground-state.png)
 
+## Adding Memory
+
+While **sessions** store information about a current conversation, sometimes we want to remember facts _between_ sessions. Example: if a customer tells a shopping agent he hates the color red, that fact should be present across _all_ future sessions.
+
+We can enable this cross-session remembering with Agent Platform's [Memory Bank](https://docs.cloud.google.com/gemini-enterprise-agent-platform/scale/memory-bank). It works like this: every time the user sends the agent a message, Memory Bank analyzes the conversation and automatically extracts and remembers factual snippets that might be useful to future conversations. To enable it:
+
+```Consult agents-cli and add a Memory Bank feature to my agent. Wire it up so the agent saves salient details automatically and looks them up on future turns.```
+
+Depending on your application, you can be more specific:
+
+```Consult agents-cli and add a Memory Bank feature to my agent. Ensure my agent remembers all stated user preferences. Wire it up so the agent saves salient details automatically and looks them up on future turns.```
+
+You can test it in Playground by telling your agent a fact about yourself. Then, view the stored memory in the Cloud Console [here](https://console.cloud.google.com/agent-platform/memory-bank):
+
+![Agent Platform forming a new memory from the conversation](images/apothecary-memory.png)
+
 ## Deploy to Agent Platform
 
 Deploying our agent to Google Cloud is as simple as telling Antigravity to deploy our agent to Agent Platform:
@@ -282,25 +298,27 @@ Test it in the agent playground or debug screen. Ask it to do something that the
 
 # Ground Your Agent with RAG
 
-Sometimes your agent needs to answer from a body of documents — a product manual, a policy handbook, a collection of recipes, a set of research papers — that's far too large to paste into a prompt. **RAG (Retrieval-Augmented Generation)** solves this: you index your documents into a **corpus**, and at runtime your agent retrieves only the most relevant passages and grounds its answer on them, instead of guessing.
+Sometimes your agent needs to answer from a reference document — a product manual, a policy handbook, a collection of recipes, a set of research papers — that's too large to paste into a prompt. **RAG (Retrieval-Augmented Generation)** solves this: you index your documents into a **corpus**, and at runtime your agent retrieves only the most relevant passages and grounds its answer on them, instead of guessing.
 
 Under the hood, the corpus is built once — your documents are chunked, embedded, and stored in a managed vector database. Your agent then reaches the corpus through a **retrieval tool**, the same kind of tool you just added, but backed by semantic search over your own documents.
 
-First, put the documents you want your agent to know about in Cloud Storage (HTML, PDF, TXT, and Google Docs are all supported). You can reuse the bucket you created earlier, or ask AGY to make one:
+To try this out, find or create a reference document. A .txt file is simplest. We'll use an [old-timey medical guide](https://www.gutenberg.org/cache/epub/49513/pg49513.txt) from Project Gutenberg. First upload your document:
 
-```
-Upload the documents in ./my_docs to a Cloud Storage bucket so I can use them for RAG.
-```
+![Uploading the reference document](images/upload-file.png)
 
 Now ask AGY to build the corpus and wire retrieval into your agent. This uses the `rag-engine-setup` skill, which creates a **serverless** RAG corpus (the cheapest, no-allowlist option) and adds the retrieval tool for you:
 
 ```
-Use the rag-engine-setup skill to ground my agent on my documents: create a serverless Vertex AI RAG corpus from my bucket, import and index the files, then add a retrieval tool so my agent answers from the corpus. Look at my project_brief.md for what the documents cover.
+Use the rag-engine-setup skill to ground my agent on the document <your_document_path_here>: create a serverless Vertex AI RAG corpus, import and index the file, then add a retrieval tool so my agent answers from the corpus.
 ```
 
 Building the corpus takes a few minutes — the files are parsed, chunked, and embedded before the index is ready. When it's done, test it in the Playground by asking something that can only be answered from your documents. Adapt the question to your domain (for a recipe agent: *"What's a good remedy for a cough?"*; for a policy bot: *"What's the refund window?"*). The agent should call the retrieval tool and answer from the retrieved passages rather than making something up.
 
 You can watch this happen in the Playground's trace: the retrieval tool fires, returns the top matching chunks, and the model composes a grounded answer from them.
+
+You can also inspect your corpus and its indexed files in the console [here](https://console.cloud.google.com/agent-platform/rag):
+
+![The Vertex AI RAG Engine showing your corpus and its indexed documents](images/culpeper-retreival.png)
 
 # Generative AI (Image Generation)
 Tools can also give your agent the power of Google's generative AI models. A great one to reach for is image generation with `gemini-2.5-flash-image`, which turns a short text prompt into an image so your agent can create visuals on demand. It runs in the `global` region. You can read about it here: https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/2-5-flash-image
