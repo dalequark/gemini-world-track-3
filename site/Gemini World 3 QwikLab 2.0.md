@@ -277,7 +277,7 @@ Create a Cloud Storage bucket for this project. Give it a name that fits my app 
 
 To confirm your bucket was created, find it here: [https://console.cloud.google.com/storage](https://console.cloud.google.com/storage).
 
-Later, when your agent generates images, it can save them to this bucket and store the public URL in Firestore alongside the record — so your frontend can display them.
+In the image-generation step below, your agent uploads each generated image to this bucket and gets back a public URL. A public URL is a plain `https` link that any browser can load, so the image can appear inside your agent's A2UI cards and in your custom frontend. You can also save that URL on the item's Firestore record so it shows whenever the item is looked up.
 
 # Add Tools
 
@@ -324,8 +324,10 @@ You can also inspect your corpus and its indexed files in the console [here](htt
 Tools can also give your agent the power of Google's generative AI models. A great one to reach for is image generation with `gemini-2.5-flash-image`, which turns a short text prompt into an image so your agent can create visuals on demand. It runs in the `global` region. You can read about it here: https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/2-5-flash-image
 
 ```
-Add a tool that generates an image for an item in my agent's domain (look at my project_brief.md) using the gemini-2.5-flash-image model in the global region. Save the image with tool_context.save_artifact so it shows up in the Playground and after you deploy. Do not write the image to a file and return a path. Use the Developer Knowledge MCP to confirm the API if you're unsure.
+Add a tool that generates an image for an item in my agent's domain (look at my project_brief.md) using the gemini-2.5-flash-image model in the global region. Do two things with the generated image: (1) save it with tool_context.save_artifact so it shows up in the Playground's Artifacts panel, and (2) upload the same image bytes to the public Cloud Storage bucket I created earlier and return its public https URL (https://storage.googleapis.com/<bucket>/<object>) from the tool. Hardcode the bucket name as a string, the same way we hardcoded the Firestore project. Do not write the image to a local file and return a path. Use the Developer Knowledge MCP to confirm the API if you're unsure.
 ```
+
+The tool does two things because each output has a different use. The saved artifact shows in the Playground's Artifacts panel, which is a quick way to see the image while you develop. The public URL is what you use later: your agent can put it in an A2UI Image component to show the picture inside a card, and your frontend can load it. The Artifacts panel only works inside the Playground, so the public URL is what makes the image visible elsewhere.
 
 Now ask your agent to generate an image for one of the items in your domain. You should get back a real image, which appears in the Artifacts panel.
 ![](images/image-generation-food.png)
@@ -370,6 +372,8 @@ Restart the agent playground so it picks up my latest changes.
 Start a new session, then ask for something that fits a card or table. For a store agent, "Show me what's in stock" might render a table, and "Tell me about this item" might render a card. Adapt the question to whatever your agent knows about. You should see real UI instead of JSON.
 ![](images/a2ui-in-adk-playground.png)
 
+A card can also show an image. Add an `Image` component and set its URL to the public URL your image tool returns, and the picture appears inside the card instead of only in the Artifacts panel. Ask your agent to generate an image for an item and show it, and you should get a card with the picture in it. The URL must be a public `https` link. A bare artifact filename cannot be loaded by the renderer and shows as a broken image.
+
 One important setting: **turn Token Streaming OFF** in the Playground (the toggle in its settings). With streaming on, the dev UI shows the raw streamed JSON and never swaps in the card. If you still see raw JSON after that, check that the callback is wired up and that you are on version 0.8, then hard-refresh and start a new session. (If the Playground in your environment still won't render it, you can run the dev UI directly with `uv run adk web --port 8080 --allow_origins "*" --reload_agents`.)
 
 # Building a Frontend
@@ -384,13 +388,13 @@ Your agent has grown a lot since you first deployed it: it now has storage, tool
 Redeploy my agent to Agent Platform.
 ```
 
-**If your agent uses Firestore (or Cloud Storage), do this next.** The deployed agent runs as its *own service account*, which has **no access to your data by default** — so a database-backed answer comes back empty even though it worked in the Playground. Grant the deployed agent the role it needs:
+Do this next if your agent uses Firestore or Cloud Storage. The deployed agent runs as its own service account, which has no access to your data by default. It worked in the Playground because you ran as yourself. On the deployed agent a Firestore query comes back empty, and an image upload to Cloud Storage fails and no image appears. Grant the roles the deployed agent needs:
 
 ```bash
-Grant my deployed agent's service account the Firestore role it needs (roles/datastore.user).
+Grant my deployed agent's service account the roles it needs: roles/datastore.user for Firestore, and roles/storage.objectAdmin on my image bucket if it generates images.
 ```
 
-This uses the `troubleshoot-lab-setup` skill, which grants `roles/datastore.user` to your agent's runtime service account. (A Cloud Storage tool needs a storage role instead.)
+This uses the `troubleshoot-lab-setup` skill to grant those roles to your agent's runtime service account.
 
 Grab the resource name from the fresh `deployment_metadata.json`. You'll point the frontend at it in a moment.
 
@@ -398,7 +402,7 @@ Grab the resource name from the fresh `deployment_metadata.json`. You'll point t
 
 We don't hand you a pre-built frontend. Instead, ask AGY to build a minimal one for you. This invokes the `build-agent-frontend` skill, which copies a small FastAPI proxy and chat UI into a `frontend/` folder. The browser only ever talks to the proxy (same origin, no CORS), and the proxy authenticates to your deployed agent with Application Default Credentials.
 
-The chat shows your agent's text replies **and renders its A2UI cards** — the same cards you saw in the ADK dev UI now show up in your own web app. The template ships a small built-in renderer, so it works whether or not your agent uses A2UI (anything it can't render falls back to plain text).
+The chat shows your agent's text replies and renders its A2UI cards. The same cards you saw in the ADK dev UI now show up in your own web app, including any generated images (the card's `Image` points at the public URL from your Cloud Storage bucket). The template ships a small built-in renderer, so it works whether or not your agent uses A2UI (anything it can't render falls back to plain text).
 
 ```bash
 Using the build-agent-frontend skill, copy its minimal FastAPI proxy and chat UI template into ./frontend and wire it to my deployed agent with AGENT_ENGINE_RESOURCE_NAME. Keep it a plain chat UI. Do not build a React app or pull in a large sample frontend.
