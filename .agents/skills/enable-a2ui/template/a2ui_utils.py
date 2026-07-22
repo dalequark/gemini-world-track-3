@@ -41,6 +41,14 @@ _FALLBACK_TEXT = (
     "I couldn't render that view. Could you ask again, maybe for a simpler summary?"
 )
 
+# adk web can only render an <Image> whose url is a real, fetchable http(s) link.
+# Models frequently emit an Image pointing at a bare artifact filename or a
+# relative path (e.g. "recipe_image_123.png"), which renders as a broken-image
+# icon. We swap those for this short note; the generated media still shows up in
+# the adk web Artifacts panel.
+_HTTP_URL_RE = re.compile(r"^https?://", re.I)
+_IMAGE_NOTE = "Image generated — open the Artifacts panel to view it."
+
 
 def _wrap_a2ui_part(a2ui_message: dict) -> types.Part:
     """Wrap a single A2UI message for rendering in adk web."""
@@ -117,6 +125,37 @@ def _extract_a2ui_messages(text: str) -> list[dict]:
         elif any(k in value for k in _A2UI_KEYS):
             messages.append(value)
     return messages
+
+
+def _sanitize_image_components(messages: list[dict]) -> None:
+    """Replace un-fetchable <Image> components with a short <Text> note, in place.
+
+    Keeps the component's `id` so any parent child-reference still resolves; only
+    the component body changes from Image to Text. An Image is kept only if its
+    url is a literal http(s) link (a path-bound or relative/filename url can't be
+    fetched by adk web and would render as a broken-image icon).
+    """
+    for m in messages:
+        surface = m.get("surfaceUpdate")
+        if not isinstance(surface, dict):
+            continue
+        for c in surface.get("components") or []:
+            if not isinstance(c, dict):
+                continue
+            comp = c.get("component")
+            if not isinstance(comp, dict) or "Image" not in comp:
+                continue
+            img = comp.get("Image")
+            url = img.get("url") if isinstance(img, dict) else None
+            literal = url.get("literalString") if isinstance(url, dict) else None
+            if isinstance(literal, str) and _HTTP_URL_RE.match(literal):
+                continue  # real link -> leave the Image alone
+            c["component"] = {
+                "Text": {
+                    "text": {"literalString": _IMAGE_NOTE},
+                    "usageHint": "body",
+                }
+            }
 
 
 def _component_ids_and_refs(components: list) -> tuple[set, set]:
@@ -197,6 +236,9 @@ def a2ui_callback(
         messages = _extract_a2ui_messages(text)
         if not messages:
             continue
+
+        # Turn un-fetchable <Image> URLs into a text note (no broken-image icons).
+        _sanitize_image_components(messages)
 
         if not _surface_is_renderable(messages):
             # We recognized A2UI but couldn't recover a renderable surface — the

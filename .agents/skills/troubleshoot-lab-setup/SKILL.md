@@ -146,6 +146,19 @@ instead of the lab account (check #0), ADC missing (check #2), a missing
 You're either on the wrong project (#1) or the API is off (#3). Fix the project
 first, then enable.
 
+### `adk web`/`adk run` fails at startup / `cannot import name '<x>' from 'google.cloud'` / ModuleNotFound
+You ran a **bare `adk`**, which resolves to a *global* Python that doesn't have
+your project's dependencies. Run it through the project `.venv` with **`uv run`**:
+
+```bash
+uv run adk web --port 8080 --allow_origins "*" --reload_agents
+```
+
+Tell-tale symptoms: `cannot import name 'firestore' from 'google.cloud'`, or a
+`ModuleNotFoundError` for a package you *know* is installed (e.g.
+`a2ui-agent-sdk`). Bare `adk` is a different interpreter; `uv run adk` uses the
+project venv where the deps actually live.
+
 ### `agents-cli deploy` fails
 1. Project pinned? (#1) — this is the most common cause.
 2. APIs enabled and authenticated? (#2, #3)
@@ -205,13 +218,27 @@ console), then re-test. A silent hang = wrong/empty project; `PERMISSION_DENIED`
 
 ### `NotFound: The database (default) does not exist` (deployed Firestore agent)
 Your code is building the Firestore client from the project **number**, not the
-ID. On Agent Engine `google.auth.default()` returns the project *number*, but
-Firestore only resolves the `(default)` database by project **ID**. Pin the ID:
+ID. On Agent Engine, **both `google.auth.default()` and the `GOOGLE_CLOUD_PROJECT`
+env var return the project *number*** — but Firestore only resolves the
+`(default)` database by project **ID**. So this common pattern 404s on the
+deployed agent even though it works locally:
+
 ```python
-db = firestore.Client(project="<your-project-id>")   # the ID, NOT the number
+# WRONG on Agent Engine: GOOGLE_CLOUD_PROJECT is the project NUMBER there
+db = firestore.Client(project=os.getenv("GOOGLE_CLOUD_PROJECT"))
 ```
-Don't derive it from `google.auth.default()`; use the same ID in your seed script,
-then **redeploy**. (It works locally because your ADC returns the ID.)
+
+Pin the project **ID** explicitly — never derive the Firestore project from
+`google.auth.default()` or `GOOGLE_CLOUD_PROJECT`:
+
+```python
+FIRESTORE_PROJECT = "<your-project-id>"           # the ID, NOT the number
+db = firestore.Client(project=FIRESTORE_PROJECT)
+```
+
+Use the same ID in your seed script, then **redeploy**. (It works locally only
+because your local `GOOGLE_CLOUD_PROJECT`/ADC is already the ID; the deployed
+runtime sets it to the number.)
 
 ### `/chat` errors after deploying the frontend to Cloud Run
 The Cloud Run service runs as a **different identity** than your local user, so
