@@ -414,7 +414,7 @@ Install the Firebase MCP server.
 When that's done, ask AGY to give your agent a Firestore backend. Describe a collection that fits whatever you're building. AGY can look at your project_brief.md and pick sensible fields. Adapt this prompt to your own domain:
 
 ```
-Give my agent a Firestore database with a collection that fits my app (look at my project_brief.md), where each document has a few sensible fields. Add function tools so my agent can read and write it, and seed a few sample items.
+Give my agent a Firestore database with a collection that fits my app (look at my project_brief.md), where each document has a few sensible fields. Add function tools so my agent can read and write it, and seed a few sample items. Create the Firestore client using my project ID (get it from `gcloud config get-value project`), not from `google.auth.default()` — on Agent Platform that returns the project number, which makes Firestore fail with "database (default) does not exist" after you deploy. Use that same project ID in both the seed script and the agent.
 ```
 
 For example, a store/marketplace agent might use an "inventory" collection with name, description, price, and stock; a travel agent might use a "destinations" collection; a recipe agent a "recipes" collection. 
@@ -470,7 +470,7 @@ Of course, you are able to update your tool instructions from the last section t
 
 # Enrich Responses with A2UI
 
-So far your agent replies in plain text. A2UI lets it reply with real UI instead: cards, tables, forms, and buttons. Your agent writes a small description of the UI as JSON, and a renderer turns that JSON into components on screen. A2UI is open source and works with any agent built with ADK.
+So far your agent replies in plain text. A2UI lets it reply with real UI instead: cards and tables. Your agent writes a small description of the UI as JSON, and a renderer turns that JSON into components on screen. A2UI is open source and works with any agent built with ADK. (In the ADK dev UI the cards are **display-only** — buttons and forms show but don't do anything; keep your UI to cards and tables built from rows and columns.)
 
 There are two pieces to set up, and you need both, or you will just see raw JSON:
 
@@ -491,7 +491,9 @@ Now test it in the same Playground you have been using. The Playground is really
 Restart the agent playground so it picks up my latest changes.
 ```
 
-Start a new session, then ask for something that fits a card or table. For a store agent, "Show me what's in stock" might render a table, and "Tell me about this item" might render a card. Adapt the question to whatever your agent knows about. You should see real UI instead of JSON. If you still see raw JSON, check that the callback is wired up and that you are on version 0.8. (If the Playground in your environment still won't render it, you can run the dev UI directly with `adk web --port 8080 --allow_origins "*" --reload_agents`.)
+Start a new session, then ask for something that fits a card or table. For a store agent, "Show me what's in stock" might render a table, and "Tell me about this item" might render a card. Adapt the question to whatever your agent knows about. You should see real UI instead of JSON.
+
+One important setting: **turn Token Streaming OFF** in the Playground (the toggle in its settings). With streaming on, the dev UI shows the raw streamed JSON and never swaps in the card. If you still see raw JSON after that, check that the callback is wired up and that you are on version 0.8, then hard-refresh and start a new session. (If the Playground in your environment still won't render it, you can run the dev UI directly with `adk web --port 8080 --allow_origins "*" --reload_agents`.)
 
 # Building a Frontend
 
@@ -505,13 +507,21 @@ Your agent has grown a lot since you first deployed it: it now has storage, tool
 Redeploy my agent to Agent Platform.
 ```
 
+**If your agent uses Firestore (or Cloud Storage), do this next.** The deployed agent runs as its *own service account*, which has **no access to your data by default** — so a database-backed answer comes back empty even though it worked in the Playground. Grant the deployed agent the role it needs:
+
+```bash
+Grant my deployed agent's service account the Firestore role it needs (roles/datastore.user).
+```
+
+This uses the `troubleshoot-lab-setup` skill, which grants `roles/datastore.user` to your agent's runtime service account. (A Cloud Storage tool needs a storage role instead.)
+
 Grab the resource name from the fresh `deployment_metadata.json`. You'll point the frontend at it in a moment.
 
 ## Build the frontend
 
 We don't hand you a pre-built frontend. Instead, ask AGY to build a minimal one for you. This invokes the `build-agent-frontend` skill, which copies a small FastAPI proxy and chat UI into a `frontend/` folder. The browser only ever talks to the proxy (same origin, no CORS), and the proxy authenticates to your deployed agent with Application Default Credentials.
 
-This is a plain text chat, so it shows your agent's text replies. The A2UI cards and tables you saw in the ADK dev UI stay there for now. Rendering A2UI in a custom frontend is a separate step that this lab doesn't cover yet.
+The chat shows your agent's text replies **and renders its A2UI cards** — the same cards you saw in the ADK dev UI now show up in your own web app. The template ships a small built-in renderer, so it works whether or not your agent uses A2UI (anything it can't render falls back to plain text).
 
 ```bash
 Using the build-agent-frontend skill, copy its minimal FastAPI proxy and chat UI template into ./frontend and wire it to my deployed agent with AGENT_ENGINE_RESOURCE_NAME. Keep it a plain chat UI. Do not build a React app or pull in a large sample frontend.
