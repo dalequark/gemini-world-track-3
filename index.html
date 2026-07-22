@@ -373,7 +373,7 @@ So far we've built and deployed an extremely simple agent--basically, a chatbot.
 - Calling tools (i.e. running code, calling an API, interacting with a database)
 - Conversation Memory (for storing information about a user between sessions)
 - Database/blob storage access for external application data (i.e. users, product inventory, images)
-- The ability to generate images and video
+- The ability to generate images
 - A snazzy frontend
 
 Now's a good spot to pause and decide what kind of agentic application you'd like to build. It doesn't have to be complicated — a good workshop project is one narrow task with a bit of data behind it. For example:
@@ -414,7 +414,7 @@ Install the Firebase MCP server.
 When that's done, ask AGY to give your agent a Firestore backend. Describe a collection that fits whatever you're building. AGY can look at your project_brief.md and pick sensible fields. Adapt this prompt to your own domain:
 
 ```
-Give my agent a Firestore database with a collection that fits my app (look at my project_brief.md), where each document has a few sensible fields. Add function tools so my agent can read and write it, and seed a few sample items. Create the Firestore client using my project ID (get it from `gcloud config get-value project`), not from `google.auth.default()` — on Agent Platform that returns the project number, which makes Firestore fail with "database (default) does not exist" after you deploy. Use that same project ID in both the seed script and the agent.
+Give my agent a Firestore backend: a collection that fits my app (look at my project_brief.md) with a few sensible fields, function tools to read and write it, and a few seeded items. Important: hardcode my project ID as a string for the Firestore client and the seed script (find it with `gcloud config get-value project`). Don't read it from `google.auth.default()` or `GOOGLE_CLOUD_PROJECT`; on Agent Platform those return the project number, which breaks Firestore after you deploy.
 ```
 
 For example, a store/marketplace agent might use an "inventory" collection with name, description, price, and stock; a travel agent might use a "destinations" collection; a recipe agent a "recipes" collection. 
@@ -435,7 +435,7 @@ Right now, your agent can only talk. Tools are functions that your agent can use
 Every agent is different, so start by asking your coding AI assistant for tools that fit the agent you've decided to build:
 
 ```bash
-Look at the agent I'm building. Suggest 2–3 tools it could call to take real action or fetch real data, then recommend the simplest one to implement first.
+Look at my project_brief.md and the agent I'm building. Suggest 2-3 tools it could call to take real action or fetch real data, then recommend the simplest one to implement first.
 ```
 After discussing and planning with your agent, pick one to implement. 
 
@@ -445,14 +445,15 @@ Implement the tool we just discussed as a function tool and add it to my agent. 
 
 Test it in the agent playground or debug screen. Ask it to do something that the tool is able to do, and the agent should be able to call the tool. You should be able to confirm this trace in the logs. 
 
-# Generative AI (Omni)
-Tools can also give your agent the power of Google's generative AI models. A great one to reach for is Omni (`gemini-omni-flash-preview`), Google's latest multimodal model for image, video, and text. Omni takes a short text prompt (or a reference image) and generates a short video clip, so your agent can produce visual assets on demand. It runs in the `global` region. You can read about it here: https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/omni-flash-preview
+# Generative AI (Image Generation)
+Tools can also give your agent the power of Google's generative AI models. A great one to reach for is image generation with `gemini-2.5-flash-image`, which turns a short text prompt into an image so your agent can create visuals on demand. It runs in the `global` region. You can read about it here: https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/2-5-flash-image
 
 ```
-Add a tool that generates a short video for an item in my agent's domain using Google's Omni model (model name: gemini-omni-flash-preview) in the global region. See https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/omni-flash-preview. The tool should take a short subject/description and return the generated video. Use the Developer Knowledge MCP to confirm the exact API if you're unsure.
+Add a tool that generates an image for an item in my agent's domain (look at my project_brief.md) using the gemini-2.5-flash-image model in the global region. Save the image with tool_context.save_artifact so it shows up in the Playground and after you deploy. Do not write the image to a file and return a path. Use the Developer Knowledge MCP to confirm the API if you're unsure.
 ```
 
-Now ask your agent to generate a video for one of the items in your domain. You should get back a real video. 
+Now ask your agent to generate an image for one of the items in your domain. You should get back a real image, which appears in the Artifacts panel.
+![](images/image-generation-food.png)
 
 # Run Code in a Sandbox
 
@@ -492,8 +493,9 @@ Restart the agent playground so it picks up my latest changes.
 ```
 
 Start a new session, then ask for something that fits a card or table. For a store agent, "Show me what's in stock" might render a table, and "Tell me about this item" might render a card. Adapt the question to whatever your agent knows about. You should see real UI instead of JSON.
+![](images/a2ui-in-adk-playground.png)
 
-One important setting: **turn Token Streaming OFF** in the Playground (the toggle in its settings). With streaming on, the dev UI shows the raw streamed JSON and never swaps in the card. If you still see raw JSON after that, check that the callback is wired up and that you are on version 0.8, then hard-refresh and start a new session. (If the Playground in your environment still won't render it, you can run the dev UI directly with `adk web --port 8080 --allow_origins "*" --reload_agents`.)
+One important setting: **turn Token Streaming OFF** in the Playground (the toggle in its settings). With streaming on, the dev UI shows the raw streamed JSON and never swaps in the card. If you still see raw JSON after that, check that the callback is wired up and that you are on version 0.8, then hard-refresh and start a new session. (If the Playground in your environment still won't render it, you can run the dev UI directly with `uv run adk web --port 8080 --allow_origins "*" --reload_agents`.)
 
 # Building a Frontend
 
@@ -552,6 +554,7 @@ python main.py
 ```
 
 3. Open http://localhost:8080 on your web browser and you should see the UI that you built.
+![](images/frontend-skeleton-demo.png)
 
 4. Send a message and wait for a reply. Then, in the same chat, ask it “What did I just ask?” to ensure that everything is wired up correctly with a real session. If it can't remember, then it isn't working properly and you should check the resource deployment from the earlier step.
 
@@ -577,6 +580,42 @@ gcloud run deploy <your-frontend-name> \
 ```
 
 Open the Cloud Run URL and chat with your deployed agent. That's the full loop: agent on Agent Platform, frontend on Cloud Run, talking to each other.
+
+# Make Your Frontend Your Own
+
+Your whole UI lives in one file, `frontend/static/index.html`: a chat page with a title, a header, and an accent color. Ask AGY to restyle it. A few things to try:
+
+```
+Rebrand my frontend: set the title and header to my app's name and change the accent color.
+```
+
+```
+Add a row of 3 clickable example prompts above the input, tailored to my agent (look at my project_brief.md).
+```
+
+```
+Create a nice dialogue layout for my app that matches my theme.
+```
+
+```
+Suggest some UI improvements we can make to the frontend.
+```
+
+![](images/updated-layout-frontend.png)
+
+# Stretch Goals
+
+You've built the full loop. To take it further, pick from the stretch menu in your project_brief.md. A few ideas:
+
+- Video previews with Omni: generate a short video clip instead of a still image.
+- More tools, richer A2UI cards, or session memory that remembers a returning user.
+- Keep customizing the frontend to match your brand.
+
+To try video generation:
+
+```
+Add a tool that generates a short video for an item in my agent's domain (look at my project_brief.md) using Google's Omni model (gemini-omni-flash-preview) in the global region. Save the video as an artifact. Use the Developer Knowledge MCP to confirm the API.
+```
 
 </script>
 <script>
