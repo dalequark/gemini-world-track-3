@@ -33,6 +33,12 @@ images/                             ← screenshots referenced by the markdown
    python3 site/build.py
    ```
    This regenerates the root **`index.html`**.
+
+   While iterating, use **watch mode** so it rebuilds automatically every time
+   you save the markdown (Ctrl-C to stop):
+   ```bash
+   python3 site/build.py --watch
+   ```
 3. Commit both the markdown and the rebuilt `index.html`, then push:
    ```bash
    git add -A && git commit -m "Update lab docs" && git push origin gh-pages
