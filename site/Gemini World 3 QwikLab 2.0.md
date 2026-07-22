@@ -280,6 +280,28 @@ Implement the tool we just discussed as a function tool and add it to my agent. 
 
 Test it in the agent playground or debug screen. Ask it to do something that the tool is able to do, and the agent should be able to call the tool. You should be able to confirm this trace in the logs. 
 
+# Ground Your Agent with RAG
+
+Sometimes your agent needs to answer from a body of documents — a product manual, a policy handbook, a collection of recipes, a set of research papers — that's far too large to paste into a prompt. **RAG (Retrieval-Augmented Generation)** solves this: you index your documents into a **corpus**, and at runtime your agent retrieves only the most relevant passages and grounds its answer on them, instead of guessing.
+
+Under the hood, the corpus is built once — your documents are chunked, embedded, and stored in a managed vector database. Your agent then reaches the corpus through a **retrieval tool**, the same kind of tool you just added, but backed by semantic search over your own documents.
+
+First, put the documents you want your agent to know about in Cloud Storage (HTML, PDF, TXT, and Google Docs are all supported). You can reuse the bucket you created earlier, or ask AGY to make one:
+
+```
+Upload the documents in ./my_docs to a Cloud Storage bucket so I can use them for RAG.
+```
+
+Now ask AGY to build the corpus and wire retrieval into your agent. This uses the `rag-engine-setup` skill, which creates a **serverless** RAG corpus (the cheapest, no-allowlist option) and adds the retrieval tool for you:
+
+```
+Use the rag-engine-setup skill to ground my agent on my documents: create a serverless Vertex AI RAG corpus from my bucket, import and index the files, then add a retrieval tool so my agent answers from the corpus. Look at my project_brief.md for what the documents cover.
+```
+
+Building the corpus takes a few minutes — the files are parsed, chunked, and embedded before the index is ready. When it's done, test it in the Playground by asking something that can only be answered from your documents. Adapt the question to your domain (for a recipe agent: *"What's a good remedy for a cough?"*; for a policy bot: *"What's the refund window?"*). The agent should call the retrieval tool and answer from the retrieved passages rather than making something up.
+
+You can watch this happen in the Playground's trace: the retrieval tool fires, returns the top matching chunks, and the model composes a grounded answer from them.
+
 # Generative AI (Image Generation)
 Tools can also give your agent the power of Google's generative AI models. A great one to reach for is image generation with `gemini-2.5-flash-image`, which turns a short text prompt into an image so your agent can create visuals on demand. It runs in the `global` region. You can read about it here: https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/2-5-flash-image
 
