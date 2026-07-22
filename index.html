@@ -435,6 +435,19 @@ You can view the data in your Firestore database [here](https://console.cloud.go
 
 ![The Firestore data viewer in the Firebase console shows your seeded collection.](images/firestore.png)
 
+## Store Files in Cloud Storage
+
+Firestore is great for structured records, but for raw files — images, audio, video — you'll want **Cloud Storage**. This is handy when your agent generates media that you want to persist and serve publicly, for example so your frontend can embed it as an image.
+
+Ask AGY to create a bucket. Adapt the name to your app:
+
+```
+Create a Cloud Storage bucket for this project. Give it a name that fits my app (look at my project_brief.md; add a short random suffix if the name is taken), and set the permissions so objects can be viewed publicly (i.e. embedded in a web page as images).
+```
+
+To confirm your bucket was created, find it here: [https://console.cloud.google.com/storage](https://console.cloud.google.com/storage).
+
+Later, when your agent generates images, it can save them to this bucket and store the public URL in Firestore alongside the record — so your frontend can display them.
 
 # Add Tools
 
