@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gemini World · Track 3 — Lab</title>
+<script src="marked.min.js"></script>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --surface: #ffffff;
+    --border: #dee2e6;
+    --text: #212529;
+    --text-muted: #6c757d;
+    --accent: #1a73e8;
+    --accent-light: #e8f0fe;
+    --danger: #dc3545;
+    --success: #198754;
+    --success-light: #d1e7dd;
+    --warning: #fd7e14;
+    --warning-light: #fff3e0;
+    --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font); color: var(--text); background: var(--bg); line-height: 1.65; }
+
+  /* Sidebar */
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: 250px; height: 100vh;
+    background: #1a1f2e; color: #c5cdd8; overflow-y: auto; z-index: 100;
+    display: flex; flex-direction: column;
+  }
+  .sidebar-header { padding: 1.25rem 1rem .85rem; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .sidebar-header .title { font-size: .9rem; font-weight: 800; color: #fff; letter-spacing: .3px; }
+  .sidebar-header .subtitle { font-size: .7rem; color: #6b7a8d; margin-top: .2rem; }
+  .sidebar nav { flex: 1; padding: .5rem 0; }
+  .sidebar a {
+    display: block; padding: .55rem 1rem; color: #8b97a8; text-decoration: none;
+    font-size: .82rem; font-weight: 500; border-left: 3px solid transparent;
+    transition: background .12s, color .12s, border-color .12s; line-height: 1.35;
+  }
+  .sidebar a:hover { background: rgba(255,255,255,.05); color: #d0d8e3; }
+  .sidebar a.active { background: rgba(26,115,232,.12); color: #8ab4f8; border-left-color: #8ab4f8; font-weight: 700; }
+  .sidebar-footer { padding: .75rem 1rem; border-top: 1px solid rgba(255,255,255,.08); font-size: .68rem; color: #4a5568; }
+  .reload-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#2ecc71; margin-right:.4rem; vertical-align:middle; transition:opacity .3s; }
+
+  .main { margin-left: 250px; }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1a237e 0%, #1565c0 50%, #0097a7 100%);
+    color: #fff; padding: 2.75rem 2rem 2.25rem; text-align: center; position: relative; overflow: hidden;
+  }
+  .hero::after {
+    content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
+    background: repeating-linear-gradient(90deg, var(--danger) 0 60px, var(--warning) 60px 120px, var(--success) 120px 180px, var(--accent) 180px 240px);
+  }
+  .hero-track { font-size: .78rem; letter-spacing: 2px; text-transform: uppercase; opacity: .75; margin-bottom: .4rem; }
+  .hero h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: .4rem; }
+  .hero-sub { font-size: 1.02rem; opacity: .88; max-width: 680px; margin: 0 auto; }
+
+  /* Content */
+  .container { max-width: 880px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+
+  #content h1 {
+    font-size: 1.6rem; font-weight: 800; margin: 2.5rem 0 1rem;
+    padding-bottom: .5rem; border-bottom: 3px solid var(--accent); color: #17233b; scroll-margin-top: 1rem;
+  }
+  #content h1:first-child { margin-top: .5rem; }
+  #content h2 { font-size: 1.25rem; margin: 2rem 0 .85rem; color: var(--text); scroll-margin-top: 1rem; }
+  #content h3, #content h4 { margin: 1.4rem 0 .6rem; color: #2a3547; }
+  #content h4 { font-size: .95rem; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+  #content p { margin-bottom: .9rem; }
+  #content ul, #content ol { margin: 0 0 1rem 1.4rem; }
+  #content li { margin-bottom: .35rem; }
+  #content a { color: var(--accent); text-decoration: none; }
+  #content a:hover { text-decoration: underline; }
+  #content strong { font-weight: 700; }
+  #content img { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); margin: 1rem 0; display: block; }
+  #content hr { border: none; border-top: 2px solid var(--border); margin: 2.5rem 0; }
+
+  /* Inline code */
+  #content code {
+    background: #eef1f5; padding: .15rem .4rem; border-radius: 4px;
+    font-family: var(--mono); font-size: .88em; color: #b5296d;
+  }
+  /* Code / prompt blocks -> dark, like the reference */
+  #content pre {
+    background: #1e1e1e; color: #d4d4d4; padding: 1.1rem 1.25rem; border-radius: var(--radius);
+    overflow-x: auto; margin: 1rem 0; position: relative; box-shadow: var(--shadow);
+  }
+  #content pre code {
+    background: none; color: inherit; padding: 0; font-family: var(--mono);
+    font-size: .86rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+  }
+  #content pre::before {
+    content: "prompt"; position: absolute; top: .35rem; right: .6rem;
+    font-size: .62rem; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  /* Blockquotes -> info callout */
+  #content blockquote {
+    background: var(--accent-light); border-left: 4px solid var(--accent);
+    border-radius: var(--radius); padding: 1rem 1.25rem; margin: 1.25rem 0; color: #1c3a5e;
+  }
+  #content blockquote p:last-child { margin-bottom: 0; }
+  #content blockquote pre { margin: .75rem 0; }
+  /* Placeholder callouts (author TODOs) */
+  #content blockquote.ph-image {
+    background: #f3e8ff; border-color: #7c3aed; color: #4a2c72;
+    border-style: dashed; border-left-style: solid;
+  }
+  #content blockquote.ph-todo {
+    background: var(--warning-light); border-color: var(--warning); color: #7a3d00;
+  }
+  #content blockquote.ph-presenter {
+    background: #1f2733; border-color: #56b6c2; color: #cdd9e5;
+  }
+  #content blockquote.ph-presenter strong { color: #7fdbe8; }
+  #content blockquote.ph-presenter code { background: rgba(255,255,255,.12); color: #e8eef5; }
+  #content blockquote.ph-presenter em { color: #9db4c9; }
+  /* Presenter-notes toggle */
+  body.hide-presenter #content blockquote.ph-presenter { display: none; }
+  .toggle-row { display: flex; align-items: center; gap: .45rem; padding: .1rem 0 .55rem; font-size: .72rem; color: #9fb0c3; cursor: pointer; user-select: none; }
+  .toggle-row input { cursor: pointer; margin: 0; }
+  /* Pending (not-yet-added) screenshots render as a clean placeholder, not a broken icon */
+  #content .img-pending {
+    background:#f3e8ff; border:2px dashed #7c3aed; color:#4a2c72;
+    border-radius:10px; padding:1rem 1.25rem; margin:1rem 0; font-size:.88rem; font-weight:500;
+  }
+
+  /* Tables */
+  #content table { width: 100%; border-collapse: collapse; font-size: .9rem; margin: 1rem 0; }
+  #content th, #content td { padding: .55rem .75rem; border: 1px solid var(--border); text-align: left; }
+  #content th { background: #f1f3f5; font-weight: 700; }
+  #content tr:hover td { background: #f8f9fa; }
+
+  /* TODO highlighting so gaps are obvious while authoring */
+  #content h1:has(+ *)  { }
+  .todo-flag { background: var(--warning-light); border-left: 4px solid var(--warning); padding: .1rem .4rem; border-radius: 4px; }
+
+  #status { padding: 3rem; text-align: center; color: var(--text-muted); }
+
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="title">Gemini World · Track 3</div>
+    <div class="subtitle">Build an agent-first app</div>
+  </div>
+  <nav id="toc"></nav>
+  <div class="sidebar-footer">
+    <label class="toggle-row"><input type="checkbox" id="toggle-presenter"> Show presenter notes</label>
+    <div><span class="reload-dot" id="dot"></span><span id="footer-status">Live preview · auto-reloads</span></div>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="hero">
+    <div class="hero-track">Build with Gemini World Tour · Track 3</div>
+    <h1 id="hero-title">Gemini World 3 Lab</h1>
+    <p class="hero-sub">Prototype, equip, evaluate, and deploy your own agent-first application on Google Cloud.</p>
+  </div>
+  <div class="container">
+    <div id="content"><div id="status">Loading tutorial…</div></div>
+  </div>
+</div>
+
+<script type="text/markdown" id="md-inline"></script>
+<script>
+  const MD_PATH = "../Gemini World 3 QwikLab 2.0.md";
+
+  // Google Docs export escapes punctuation with backslashes (\`, \[, \!, \<, ...).
+  // Strip those so markdown renders cleanly.
+  function unescapeGdocs(src) {
+    return src.replace(/\\([\\`*_{}\[\]()#+\-.!<>|~"'@$%^&=:;,/])/g, "$1");
+  }
+
+  function slugify(text) {
+    return text.toLowerCase().replace(/<[^>]+>/g, "").replace(/[^\w]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  // Strip markdown links / author mailto tags from a heading for the nav label.
+  function cleanLabel(text) {
+    return text.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").trim();
+  }
+
+  let lastRaw = null;
+
+  function render(raw) {
+    const cleaned = unescapeGdocs(raw);
+    const html = marked.parse(cleaned, { gfm: true, breaks: false });
+    const content = document.getElementById("content");
+    content.innerHTML = html;
+
+    // Missing screenshots -> clean "pending" placeholder instead of a broken-image icon
+    content.querySelectorAll("img").forEach(img => {
+      img.addEventListener("error", () => {
+        const d = document.createElement("div");
+        d.className = "img-pending";
+        d.textContent = "📷 screenshot pending: " + (img.getAttribute("alt") || img.getAttribute("src"));
+        img.replaceWith(d);
+      });
+    });
+
+    // Flag placeholder callouts so they stand out from real ones
+    content.querySelectorAll("blockquote").forEach(bq => {
+      const t = bq.textContent || "";
+      if (/Presenter note/i.test(t)) bq.classList.add("ph-presenter");
+      else if (/SCREENSHOT|DEMO/.test(t)) bq.classList.add("ph-image");
+      else if (/TODO:/.test(t)) bq.classList.add("ph-todo");
+    });
+
+    // Hero title from first H1
+    const firstH1 = content.querySelector("h1");
+    if (firstH1) document.getElementById("hero-title").textContent = cleanLabel(firstH1.textContent);
+
+    // Build sidebar from H1s; assign ids for anchoring
+    const toc = document.getElementById("toc");
+    toc.innerHTML = "";
+    const heads = content.querySelectorAll("h1");
+    heads.forEach((h, i) => {
+      const id = h.id || slugify(h.textContent) || ("sec-" + i);
+      h.id = id;
+      // Flag empty TODO sections visually
+      let label = cleanLabel(h.textContent);
+      const a = document.createElement("a");
+      a.href = "#" + id;
+      a.textContent = label;
+      a.dataset.target = id;
+      if (/todo/i.test(label)) { a.style.color = "#f0a35e"; }
+      toc.appendChild(a);
+    });
+
+    setupScrollSpy();
+  }
+
+  function setupScrollSpy() {
+    const links = [...document.querySelectorAll("#toc a")];
+    const map = links.map(a => ({ a, el: document.getElementById(a.dataset.target) })).filter(x => x.el);
+    function onScroll() {
+      let current = map[0];
+      for (const m of map) {
+        if (m.el.getBoundingClientRect().top <= 120) current = m;
+      }
+      links.forEach(a => a.classList.remove("active"));
+      if (current) current.a.classList.add("active");
+    }
+    window.removeEventListener("scroll", window.__spy || (()=>{}));
+    window.__spy = onScroll;
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+
+  async function load(initial) {
+    try {
+      const res = await fetch(encodeURI(MD_PATH) + "?t=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const raw = await res.text();
+      if (raw !== lastRaw) {
+        const y = window.scrollY;
+        lastRaw = raw;
+        render(raw);
+        if (!initial) window.scrollTo(0, y); // preserve scroll on live reload
+        blinkDot();
+      }
+    } catch (e) {
+      if (initial) {
+        document.getElementById("content").innerHTML =
+          '<div id="status">Could not load the markdown.<br><br><code>' + e.message +
+          '</code><br><br>Make sure the dev server is running from the project root.</div>';
+      }
+    }
+  }
+
+  function blinkDot() {
+    const dot = document.getElementById("dot");
+    dot.style.opacity = "0.2";
+    setTimeout(() => (dot.style.opacity = "1"), 250);
+  }
+
+  // Presenter-notes toggle (persisted across reloads)
+  const toggle = document.getElementById("toggle-presenter");
+  const savedPref = localStorage.getItem("showPresenter");
+  const showPresenter = savedPref === null ? false : savedPref === "true";
+  toggle.checked = showPresenter;
+  document.body.classList.toggle("hide-presenter", !showPresenter);
+  toggle.addEventListener("change", () => {
+    document.body.classList.toggle("hide-presenter", !toggle.checked);
+    localStorage.setItem("showPresenter", toggle.checked);
+  });
+
+  // Inline markdown (built/hosted single file) vs. live fetch (local dev)
+  const inlineEl = document.getElementById("md-inline");
+  const inlineMd = inlineEl ? inlineEl.textContent.trim() : "";
+  if (inlineMd) {
+    document.getElementById("footer-status").textContent = "Gemini World · Track 3";
+    render(inlineMd);
+  } else {
+    load(true);
+    setInterval(() => load(false), 1500); // live reload: poll every 1.5s
+  }
+</script>
+</body>
+</html>

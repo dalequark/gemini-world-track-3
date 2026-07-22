@@ -1,0 +1,5 @@
+# Legacy/local build output — index.html is built to the repo root instead
+site/dist/
+
+# macOS noise
+.DS_Store

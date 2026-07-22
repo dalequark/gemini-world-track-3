@@ -1,0 +1,440 @@
+# Introduction
+
+In this lab, you'll learn how to build an entire production-ready agentic application using Google Cloud tools.
+
+You will:
+
+- Prototype an agent using `agents-cli`
+- Equip your agent with an enterprise-ready harness that includes Memory, Sessions, Tools, Persistent Storage, and code execution
+- Evaluate and improve the quality of your agent's responses
+- Deploy your agent to Agent Platform
+- Equip your agent with the power to use Google's Generative Models
+- Build an agent-first frontend, hosted on Cloud Run and powered by A2UI
+
+# Set Up Your Environment
+
+Find your Qwiklab credentials [here](https://explore.qwiklabs.com/authoring/labs/471145). **Don't follow that tutorial's setup instructions.** (TODO to update the correct instructions in Qwiklab). Instead, right-click on "Open Google Cloud Console" and select "Open Link in Incognito Window," then log in with the provided credentials.
+
+Once you're logged into Google Cloud Console with your Qwiklab credentials, launch a Workstation:
+
+![](images/search_workstation.png)
+![](images/launch_workstation.png)
+
+ We'll do all our development here, in Code OSS (i.e. the Cloud Shell Editor within a Workstation):
+![](images/workstation_developer_interface.png)
+
+> **Important** We'll be developing with the Cloud Shell editor WITHIN A WORKSTATION. If you try to use Cloud Shell OUTSIDE of a Workstation, you'll quickly run out of memory. So make sure not to do that!
+
+Click the button in the upper right hand corner to open a terminal:
+![](images/open-terminal.png)
+
+## Authenticate
+
+In Cloud Shell, run the following commands to set up authentication using your Qwiklab credentials:
+
+```bash
+gcloud auth login
+gcloud auth application-default login
+```
+
+## Get Started with Antigravity CLI
+
+
+To start, download this [Github repo](https://github.com/dalequark/gemini-world-track-3) that comes equipped with 
+a selection of starter skills. 
+
+
+> **What is a skill?** A bundle of instructions that teaches your coding agent how to do a specific task well. It loads automatically when it's relevant, so you get expert behavior without spelling out every step yourself.
+
+
+To download it:
+
+```bash
+git clone https://github.com/dalequark/gemini-world-track-3
+cd gemini-world-track-3
+```
+
+From this new folder (`gemini-world-track-3`), run Antigravity CLI in the Cloud Shell.
+
+```bash
+agy
+```
+
+When asked, **choose option 2 to authenticate with a Google Cloud project** and complete the sign in flow. Make sure to use the userid, password, project id and region provided with your Qwiklab credentials.
+![](images/agy-cloud-login.png)
+
+> **Avoid agent confusion!** In this workshop, we'll be _building_ an agent with the help of an _additional_ agent--specifically, with the coding agent Antigravity (AGY). It's helpful to keep this distinction in mind as we go through the lab.
+
+On startup, AGY will scan the existing `.agents/skills/` folder and load the workshop skills automatically. To see your installed skills, run `/skills` in AGY. You should see three skills listed:
+
+![](images/verify-skills.png)
+
+## Install Additional Tools
+
+The Github repo we downloaded in the last step gave us some basic tools to get started. Let's augment our environment with even more useful skills and MCPs to make developing agents on Google Cloud even easier.
+
+> **Why skills matter:** by packaging the right steps and context up front, skills save tokens and time and improve accuracy — the agent completes a task in fewer steps, instead of rediscovering (and sometimes getting wrong) the workflow every time.
+
+### Agent CLI
+
+[**agents-cli**](https://google.github.io/agents-cli/guide/getting-started/) is Google's CLI for the full agent development lifecycle — scaffold, deploy, evaluate, and publish — all on top of the [Agent Development Kit (ADK)](https://google.github.io/adk-docs/). It's both a command-line tool and a set of skills that enable your coding agent (in this case, Antigravity) to work with Google's agent development tools effectively.
+
+```
+Install and configure agents-cli. When you're done, make sure you have access to the SKILL files it exposes.
+```
+**IMPORTANT TODO**: right now, `agents-cli` isn't installed by default in the workstations, and installation is time consuming. We **must** have this pre-installed for the actual lab.
+
+### The Developer Knowledge MCP
+
+> **What's an MCP?** Model Context Protocol (MCP) is a standard way to plug external tools and data sources into your coding agent. An MCP *server* gives the agent a new ability — here, the ability to search Google's official documentation.
+
+Now let's give Antigravity **grounded, current knowledge of Google's official docs**. The [Developer Knowledge MCP](https://codelabs.developers.google.com/developer-knowledge-mcp-antigravity) lets AGY search Google's live public documentation (across Google Cloud, Firebase, and more — including the Agent Platform products you'll use later) instead of guessing commands, which keeps the later modules out of trial-and-error spirals. It complements agents-cli: agents-cli knows the CLI workflow, while the MCP grounds AGY in the current docs for everything around it.
+
+```
+Follow the directions at https://codelabs.developers.google.com/developer-knowledge-mcp-antigravity to install the Google Developer Knowledge MCP.
+```
+
+Once it's installed, run `/mcp` to confirm `google-developer-knowledge` was correctly installed:
+
+![](images/verify-developer-mcp.png)
+
+## Verify your setup
+
+To verify our setup, tell AGY to:
+
+```
+Verify my setup.
+```
+
+This invokes the `troubleshoot-lab-setup` skill we downloaded earlier from Github  to confirm your environment is set up correctly.
+
+![](images/verify-setup.png)
+
+---
+
+# Build Your First Agent
+
+Later in this lab, you'll design your own bespoke agentic application. But for now, let's build and test a basic agent together.  Tell AGY to build a basic agent and run it locally.
+
+```
+Use agents-cli to build a simple agent I can test and run it locally.
+```
+
+<!-- > **What are Sessions and Memory?**
+> - A **Session** is a single conversation thread — the messages exchanged, plus a little scratch data (*state*) the agent tracks *during that chat*. 
+> - **Memory** are bits of data an agent can save an look up *across* sessions (e.g. "this customer is gluten-free"). It lives in its own  searchable store — the managed option is **Vertex AI Memory Bank** — and you turn it on explicitly (we do this in Part 2). -->
+
+When it's done, AGY should produce something like:
+
+![Antigravity scaffolding your first agent — the agents-cli output showing the agent has been created](images/scaffold.png)
+
+Behind the scenes, `agents-cli` scaffolds a complete ADK project for you: a Python agent definition, its configuration, and the local run/playground setup — all the boilerplate you'd otherwise write by hand — so you can go straight to shaping your agent's behavior.
+
+> Tip: If you navigate away from your terminal and AGY exits, you can always access past sessions by opening AGY again and running `/resume`.
+
+When it's done, we can tell AGY to test our agent from the command line:
+
+```
+Test my agent with the message, "Tell me a joke about a lemon."
+```
+
+## The Playground
+
+We can also test our agent in the **Playground** — a local, browser-based chat interface. Beyond just chatting, it gives us visibility into how our agent actually works: we can inspect **sessions**, step through the **traces** of each turn, and debug the tool calls and responses behind every answer. Tell AGY to:
+
+```
+Launch agent playground for me.
+```
+
+Antigravity will launch Playground on a local port. Access it by clicking the "Open Preview" button in the lower right hand side of the screen:
+
+![](images/playground-port.png)
+
+Here you can chat with our agent from a UI. On the left hand side of the screen, we can see what tools our agent has access to. Depending on how you told AGY to create an agent, your agent may have some basic tools (in this case, `get_weather`). These are blocks of deterministic, functional code your agent can call to complete tasks. We'll add more later.
+
+![](images/playground-simple.png)
+
+In the `Traces` tab, we can see the exact sequence of actions our agent took before producing a reply:
+![](images/playground-trace.png)
+
+On the top bar of the screen, we can view our existing sessions and create new ones. 
+![](images/playground-session.png)
+
+**Sessions** consist of the log of messages in a current conversation, as well as a scratchpad of temporary state which can view in the state tab:
+![](images/playground-state.png)
+
+## Deploy to Agent Platform
+
+Deploying our agent to Google Cloud is as simple as telling Antigravity to deploy our agent to Agent Platform:
+
+```Deploy my agent to agent platform.```
+
+![](images/agent-deploy.png)
+
+This could take a minute. When your agent is finally deployed, you'll be able to view it in Agent Platform:
+
+![](images/view-deployment-1.png)
+![](images/view-deployment-2.png)
+![](images/view-deployment-3.png)
+
+Clicking in, we can see the extended tool suite available for monitoring our agent in production:
+![](images/view-deployment-4.png)
+
+
+# Design Your Own Agentic Application
+
+So far we've built and deployed an extremely simple agent--basically, a chatbot. In this next section, we'll evolve **that same agent** into an application of your own design, augmenting it with capabilities like:
+- Calling tools (i.e. running code, calling an API, interacting with a database)
+- Conversation Memory (for storing information about a user between sessions)
+- Database/blob storage access for external application data (i.e. users, product inventory, images)
+- The ability to generate images
+- A snazzy frontend
+
+Now's a good spot to pause and decide what kind of agentic application you'd like to build. It doesn't have to be complicated — a good workshop project is one narrow task with a bit of data behind it. For example:
+
+- A **recipe assistant** that suggests meals from ingredients you have on hand and saves your favorites.
+- A **book concierge** that recommends titles, tracks your reading list, and generates cover art.
+- A **workout coach** that builds a plan, logs your sessions, and charts your progress.
+- A **travel planner** that assembles an itinerary and illustrates each destination.
+- A **plant-care helper** that tracks your plants, reminds you when to water, and diagnoses problems from a photo.
+
+Notice these all share the same shape you'll build here: a conversation, some stored data, a tool or two, and generated media. Whatever you pick, it'll use those same ingredients.
+
+Once you have a basic idea (or if you need help coming up with one), ask AGY for help designing your agentic application.
+This will invoke the `pick-your-agent-project` skill. In AGY, describe whatever you'd like to build, or swap in your own idea:
+
+```
+Help me design my agentic application. I need help brainstorming what specific agent to build.
+```
+
+When you're done, AGY will output a `project_brief.md` file for your review. Edit it yourself or with AGY until you have something you like:
+![](images/designbrief.png)
+
+Our agent will use this for reference as we continue development.
+
+## Rename your agent
+
+Now that you have a brief, rename your existing agent project to match the app you're building:
+
+```
+Use the newly created project_brief.md to rename my existing agent project to match it: rename the project folder and update the name in agents-cli-manifest.yaml and pyproject.toml. Keep the code in app/ unchanged, and don't deploy or change any agent logic yet.
+```
+
+# Add Persistent Storage for App Data
+
+Depending on your application, you may require an external data store, like:
+
+- **Structured data** (inventory, orders, user records) → a database like **Firestore** (serverless, simple).
+- **Raw files/blobs** (bulk images, static assets) → **Cloud Storage (GCS)**.
+
+Let's start by implementing structured data in Firestore. First, let's equip Antigravity with the [Firebase MCP](https://firebase.google.com/docs/ai-assistance/mcp-server) so it's better able to use the Firestore API:
+
+```
+Install the Firebase MCP server.
+```
+
+When that's done, ask AGY to give your agent a Firestore backend. Describe a collection that fits whatever you're building. AGY can look at your project_brief.md and pick sensible fields. Adapt this prompt to your own domain:
+
+```
+Give my agent a Firestore backend: a collection that fits my app (look at my project_brief.md) with a few sensible fields, function tools to read and write it, and a few seeded items. Important: hardcode my project ID as a string for the Firestore client and the seed script (find it with `gcloud config get-value project`). Don't read it from `google.auth.default()` or `GOOGLE_CLOUD_PROJECT`; on Agent Platform those return the project number, which breaks Firestore after you deploy.
+```
+
+For example, a store/marketplace agent might use an "inventory" collection with name, description, price, and stock; a travel agent might use a "destinations" collection; a recipe agent a "recipes" collection. 
+
+In the Playground, we can verify this worked by asking the agent something it can only answer by querying the database — adapt it to your domain (for a store: *"What items do you have in stock?"*; for a travel agent: *"What destinations do you know about?"*).
+
+You can watch the data live in the **Firebase console → Firestore Database**. A nice property of Firestore is that it's **real-time**: as your agent writes (say, an action that updates a record), the document updates instantly in the browser. What's more, you can edit entries in the browser and see them reflected immediately in the agent.
+
+You can view the data in your Firestore database [here](https://console.cloud.google.com/firestore/databases/-default).
+
+![The Firestore data viewer in the Firebase console shows your seeded collection.](images/firestore.png)
+
+
+# Add Tools
+
+Right now, your agent can only talk. Tools are functions that your agent can use to actually do things and execute. Some tool examples are: looking up data from a database, taking an action (like sending an email), creating something. This is when your agent stops just being a chatbot and starts actually doing things.
+
+Every agent is different, so start by asking your coding AI assistant for tools that fit the agent you've decided to build:
+
+```bash
+Look at my project_brief.md and the agent I'm building. Suggest 2-3 tools it could call to take real action or fetch real data, then recommend the simplest one to implement first.
+```
+After discussing and planning with your agent, pick one to implement. 
+
+```bash
+Implement the tool we just discussed as a function tool and add it to my agent. Keep the implementation minimal.
+```
+
+Test it in the agent playground or debug screen. Ask it to do something that the tool is able to do, and the agent should be able to call the tool. You should be able to confirm this trace in the logs. 
+
+# Generative AI (Image Generation)
+Tools can also give your agent the power of Google's generative AI models. A great one to reach for is image generation with `gemini-2.5-flash-image`, which turns a short text prompt into an image so your agent can create visuals on demand. It runs in the `global` region. You can read about it here: https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/2-5-flash-image
+
+```
+Add a tool that generates an image for an item in my agent's domain (look at my project_brief.md) using the gemini-2.5-flash-image model in the global region. Save the image with tool_context.save_artifact so it shows up in the Playground and after you deploy. Do not write the image to a file and return a path. Use the Developer Knowledge MCP to confirm the API if you're unsure.
+```
+
+Now ask your agent to generate an image for one of the items in your domain. You should get back a real image, which appears in the Artifacts panel.
+![](images/image-generation-food.png)
+
+# Run Code in a Sandbox
+
+Some agents need to execute code, whether that's for quick API calls, data analysis, or just doing math. Agent Platform offers code execution in an isolated sandbox, so your agent is able to code safely. Since the state persists across sessions and it doesn't touch your host, it is a very safe way to run model-generated code, even in enterprise settings.
+
+Prereqs: the Agent Platform API enabled, and your agent's identity has roles/aiplatform.user.
+
+```bash
+Add Agent Platform code execution to my agent using AgentEngineSandboxCodeExecutor so it can safely run Python in a sandbox. If I don't already have a sandbox, create one from my agent engine resource.
+```
+
+Test it by asking a question that requires real computation or analysis, like fizzbuzz, and confirm the agent runs code in the sandbox and answers from the result.
+
+Of course, you are able to update your tool instructions from the last section to use the sandbox as well. For folks who are building agents for things like auto-trading or coding, this is a super useful feature to incorporate into your agent.
+
+# Enrich Responses with A2UI
+
+So far your agent replies in plain text. A2UI lets it reply with real UI instead: cards and tables. Your agent writes a small description of the UI as JSON, and a renderer turns that JSON into components on screen. A2UI is open source and works with any agent built with ADK. (In the ADK dev UI the cards are **display-only** — buttons and forms show but don't do anything; keep your UI to cards and tables built from rows and columns.)
+
+There are two pieces to set up, and you need both, or you will just see raw JSON:
+
+1. A system prompt that teaches the model to output valid A2UI JSON. The a2ui-agent-sdk builds this for you with `A2uiSchemaManager`.
+2. A small callback (`a2ui_utils.py`) that wraps the model's JSON in the format the ADK dev UI's built-in renderer expects. You add it to your agent as an `after_model_callback`.
+
+Ask AGY to set up both. This uses the `enable-a2ui` skill, which ships the callback file for you:
+
+```bash
+Use the enable-a2ui skill to add A2UI to my agent: build the system prompt with A2uiSchemaManager (version 0.8) and the Basic Catalog, copy in a2ui_utils.py, and wire it up as an after_model_callback.
+```
+
+One thing to watch: pin A2UI to version 0.8. The callback recognizes v0.8 messages, so if the schema manager emits v0.9 the callback never fires and you are back to raw JSON.
+
+Now test it in the same Playground you have been using. The Playground is really the ADK dev UI (`agents-cli playground` runs `adk web` for you), and it comes with a built-in A2UI renderer. It only renders A2UI once the callback is in place, so restart the Playground to pick up your changes:
+
+```bash
+Restart the agent playground so it picks up my latest changes.
+```
+
+Start a new session, then ask for something that fits a card or table. For a store agent, "Show me what's in stock" might render a table, and "Tell me about this item" might render a card. Adapt the question to whatever your agent knows about. You should see real UI instead of JSON.
+![](images/a2ui-in-adk-playground.png)
+
+One important setting: **turn Token Streaming OFF** in the Playground (the toggle in its settings). With streaming on, the dev UI shows the raw streamed JSON and never swaps in the card. If you still see raw JSON after that, check that the callback is wired up and that you are on version 0.8, then hard-refresh and start a new session. (If the Playground in your environment still won't render it, you can run the dev UI directly with `uv run adk web --port 8080 --allow_origins "*" --reload_agents`.)
+
+# Building a Frontend
+
+Up to now you've tested everything in the ADK playground, and that's been your agent's "face" while you built out storage, tools, media, and A2UI. Now, let's give your agent a shareable web face and ship it to the cloud.
+
+## Redeploy your finished agent
+
+Your agent has grown a lot since you first deployed it: it now has storage, tools, media generation, a sandbox, and A2UI, none of which are in that original deployment. Before wiring up a frontend, push the latest version to Agent Platform so the frontend talks to the  fully-featured agent:
+
+```bash
+Redeploy my agent to Agent Platform.
+```
+
+**If your agent uses Firestore (or Cloud Storage), do this next.** The deployed agent runs as its *own service account*, which has **no access to your data by default** — so a database-backed answer comes back empty even though it worked in the Playground. Grant the deployed agent the role it needs:
+
+```bash
+Grant my deployed agent's service account the Firestore role it needs (roles/datastore.user).
+```
+
+This uses the `troubleshoot-lab-setup` skill, which grants `roles/datastore.user` to your agent's runtime service account. (A Cloud Storage tool needs a storage role instead.)
+
+Grab the resource name from the fresh `deployment_metadata.json`. You'll point the frontend at it in a moment.
+
+## Build the frontend
+
+We don't hand you a pre-built frontend. Instead, ask AGY to build a minimal one for you. This invokes the `build-agent-frontend` skill, which copies a small FastAPI proxy and chat UI into a `frontend/` folder. The browser only ever talks to the proxy (same origin, no CORS), and the proxy authenticates to your deployed agent with Application Default Credentials.
+
+The chat shows your agent's text replies **and renders its A2UI cards** — the same cards you saw in the ADK dev UI now show up in your own web app. The template ships a small built-in renderer, so it works whether or not your agent uses A2UI (anything it can't render falls back to plain text).
+
+```bash
+Using the build-agent-frontend skill, copy its minimal FastAPI proxy and chat UI template into ./frontend and wire it to my deployed agent with AGENT_ENGINE_RESOURCE_NAME. Keep it a plain chat UI. Do not build a React app or pull in a large sample frontend.
+```
+
+(If your project already has a web frontend you'd rather keep, tell AGY to adapt that one to the same proxy pattern instead of creating a new one.)
+
+## Test Locally
+
+Before deploying the frontend, confirm that your code can reach your agent that is currently deployed on Agent Platform. Locally just means the frontend server runs on your current machine, instead of Cloud Run, but it still talks to the same endpoint as if it was deployed on Cloud Run. This is to ensure that we don't face any wiring issues before we deploy to Cloud Run, and that the endpoint is actually live and working properly.
+
+Run all of these from the frontend/ folder. First time only, install its dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+1. Tell the frontend which agent it should talk to by pointing it at the resource name from the redeploy you just did (from the fresh `deployment_metadata.json`):
+
+```bash
+export AGENT_ENGINE_RESOURCE_NAME="<paste the resource name from deployment_metadata.json>"
+```
+
+2. Start the frontend server on your laptop and it should start listening on http://localhost:8080:
+
+```bash
+python main.py
+```
+
+3. Open http://localhost:8080 on your web browser and you should see the UI that you built.
+![](images/frontend-skeleton-demo.png)
+
+4. Send a message and wait for a reply. Then, in the same chat, ask it “What did I just ask?” to ensure that everything is wired up correctly with a real session. If it can't remember, then it isn't working properly and you should check the resource deployment from the earlier step.
+
+## Deploy to Cloud Run
+Finally, ship the frontend so anyone can use it.
+
+Note that the frontend that we are shipping deploys differently from the agent. You used agents-cli to deploy the agent to Agent Platform, the frontend is a separate custom web app, so you need to ship that to Cloud Run with gcloud. Essentially, the agent lives in Agent Platform while the frontend lives in Cloud Run and talks to the agent. This is the recommended pattern for a custom UI.
+
+The Cloud Run service runs as a different service identity than you did locally, so its service account needs roles/aiplatform.user or /chat will error out.
+
+```bash
+Deploy the frontend to Cloud Run pointing at my AGENT_ENGINE_RESOURCE_NAME, and grant the Cloud Run service account roles/aiplatform.user so it can reach the agent.
+```
+
+Or run it directly:
+
+```bash
+gcloud run deploy <your-frontend-name> \
+  --source . \
+  --region <your-region> \
+  --allow-unauthenticated \
+  --set-env-vars="AGENT_ENGINE_RESOURCE_NAME=$AGENT_ENGINE_RESOURCE_NAME"
+```
+
+Open the Cloud Run URL and chat with your deployed agent. That's the full loop: agent on Agent Platform, frontend on Cloud Run, talking to each other.
+
+# Make Your Frontend Your Own
+
+Your whole UI lives in one file, `frontend/static/index.html`: a chat page with a title, a header, and an accent color. Ask AGY to restyle it. A few things to try:
+
+```
+Rebrand my frontend: set the title and header to my app's name and change the accent color.
+```
+
+```
+Add a row of 3 clickable example prompts above the input, tailored to my agent (look at my project_brief.md).
+```
+
+```
+Create a nice dialogue layout for my app that matches my theme.
+```
+
+```
+Suggest some UI improvements we can make to the frontend.
+```
+
+![](images/updated-layout-frontend.png)
+
+# Stretch Goals
+
+You've built the full loop. To take it further, pick from the stretch menu in your project_brief.md. A few ideas:
+
+- Video previews with Omni: generate a short video clip instead of a still image.
+- More tools, richer A2UI cards, or session memory that remembers a returning user.
+- Keep customizing the frontend to match your brand.
+
+To try video generation:
+
+```
+Add a tool that generates a short video for an item in my agent's domain (look at my project_brief.md) using Google's Omni model (gemini-omni-flash-preview) in the global region. Save the video as an artifact. Use the Developer Knowledge MCP to confirm the API.
+```
