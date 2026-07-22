@@ -18,34 +18,26 @@ You need **both** of these or you'll just see raw JSON:
 
 ## Step 0 — Install the SDK
 
-The `A2uiSchemaManager` / `BasicCatalog` in Step 2 come from the **`a2ui-agent-sdk`**
-package. Add it with **`uv add`** — exactly this command, nothing fancier:
+`A2uiSchemaManager` / `BasicCatalog` (Step 2) come from the **`a2ui-agent-sdk`** package:
 
 ```bash
 uv add "a2ui-agent-sdk>=0.4.0,<0.5.0"
 ```
 
-> **Use `uv add`, NOT `uv pip install`.** `uv add` records the dependency in
-> `pyproject.toml` + `uv.lock`, which is what `agents-cli deploy` reads (via
-> `uv export`) to build the deployment. `uv pip install a2ui-agent-sdk` only puts it
-> in your local `.venv`: it works in `adk web` / the playground, then the **deployed
-> agent crashes** with `ModuleNotFoundError: No module named 'a2ui'` because the dep
-> was never recorded. Don't override the index (`UV_INDEX_URL=...`) and don't
-> hand-list transitive deps like `a2ui-core` — plain `uv add` above resolves
-> everything.
-
-> **Watch the name.** The pip/distribution name is **`a2ui-agent-sdk`**, but you
-> **import** it as **`a2ui`** (e.g. `from a2ui.schema.manager import ...`). Do NOT
-> `pip install a2ui` / do NOT add `a2ui` to your dependencies — no package by that
-> bare name exists, and `uv sync` will fail with *"a2ui was not found in the package
-> registry"*. You also do **not** need to `git clone` the a2ui repo; that's only for
-> developing A2UI itself. The version pin matters: 0.4.x exposes the import paths
-> used below; newer majors move them.
+- **Name trap:** the package is `a2ui-agent-sdk`, but you **import** it as `a2ui`
+  (`from a2ui.schema.manager import ...`). Don't `pip install a2ui` or add a bare
+  `a2ui` dep; it doesn't exist, and `uv sync` fails with *"a2ui was not found"*.
+- **Use `uv add`, not `uv pip install`.** `uv add` records the dep in
+  `pyproject.toml`/`uv.lock`, which `agents-cli deploy` needs. `uv pip install` is
+  venv-only: it works in the playground, then the deployed agent crashes with
+  `ModuleNotFoundError: No module named 'a2ui'`.
+- No need to override the index, hand-list `a2ui-core`, or `git clone` the repo.
+  Pin `0.4.x`; newer majors move the import paths used below.
 
 ## Step 1 — Copy the callback
 
-Copy `./template/a2ui_utils.py` next to your `agent.py`. It's self-contained — it
-needs no extra packages beyond `google-adk` / `google-genai`.
+Copy `./template/a2ui_utils.py` next to your `agent.py`. It's self-contained (needs
+only `google-adk` / `google-genai`).
 
 ## Step 2 — Build the system prompt
 
@@ -100,10 +92,9 @@ root_agent = Agent(
 uv run adk web --port 8080 --allow_origins "*" --reload_agents
 ```
 
-> Run it with **`uv run`** (not a bare `adk web`). Bare `adk` resolves to a global
-> Python that lacks your project deps (e.g. `google-cloud-firestore`,
-> `a2ui-agent-sdk`) and fails at startup with `cannot import name 'firestore' from
-> 'google.cloud'` / `ModuleNotFound`. `uv run` uses the project `.venv`.
+> Use **`uv run`**, not a bare `adk web`. Bare `adk` uses a global Python that lacks
+> your project deps and fails at startup (`cannot import name 'firestore' from
+> 'google.cloud'` / `ModuleNotFound`). `uv run` uses the project `.venv`.
 
 Start a **New Session** and ask for something visual — you should see a card, not
 JSON. **Turn Token Streaming OFF** first (dev UI gear icon): with it on, adk web
@@ -111,23 +102,20 @@ shows the raw streamed JSON and never swaps in the card.
 
 ## adk web renderer limits (design around these)
 
-- **Display only.** Buttons, actions, and forms render but do nothing; there are
-  no modals. For real interactivity, use a custom frontend — see the
-  `build-agent-frontend` skill.
+- **Display only.** Buttons, actions, and forms render but do nothing. For real
+  interactivity use a custom frontend (`build-agent-frontend`).
 - **Supported components:** `Card, Column, Row, Text, Divider, List, Icon, Image`.
-  **Not** `Table` or `Heading` — build tables from Rows/Columns of Text, and use
-  `Text` + `usageHint` for headings.
-- **Images need a real `http(s)` URL.** adk web can only render an `Image` whose
-  url is a fetchable link. A **generated image saved as an artifact has no such
-  URL**, so the model pointing an `Image` at the artifact filename renders a
-  broken-image icon. The callback rewrites any non-`http(s)` `Image` into a short
-  text note; the image itself shows in the **Artifacts panel**. For true inline
-  media, use a custom frontend (`build-agent-frontend`) that can serve/fetch it.
+  No `Table` or `Heading`: build tables from Rows/Columns of Text, and use `Text`
+  + `usageHint` for headings.
+- **Images need a real `http(s)` URL.** A generated image saved as an artifact has
+  no fetchable URL, so an `Image` pointed at the filename shows a broken icon. The
+  callback swaps non-`http(s)` Images for a short text note; the image shows in the
+  **Artifacts panel** instead. For inline media, use `build-agent-frontend`.
 - **Small and flat renders best.** Deep nesting and big cards render blank. The
   callback drops broken surfaces (invalid JSON, undefined root, dangling refs) and
-  shows a short fallback instead of a blank bubble.
-- **The renderer is genuinely flaky** — even a valid surface occasionally renders
-  blank. That's an adk-web bug, not your agent.
+  shows a short fallback instead.
+- **The renderer is flaky:** even a valid surface sometimes renders blank. That's
+  an adk-web bug, not your agent.
 
 ## Troubleshooting
 

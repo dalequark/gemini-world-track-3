@@ -57,10 +57,10 @@ Deploy the frontend to Cloud Run pointing at my AGENT_ENGINE_RESOURCE_NAME, and 
 
 ## Want more than plain chat?
 
-Ship pure chat first. If the user later wants controls (a side panel of inputs,
-quick-action buttons, filters), add them **inside `static/index.html`** as a
-small, self-contained block that composes a message and sends it — keep the chat
-working and don't pull in a framework.
+Ship plain chat first. To add controls later (an input panel, quick-action
+buttons, filters), put them inside `static/index.html` as a small self-contained
+block that builds a message and sends it through the existing chat flow. That way
+the UI grows without a new framework or build step.
 
 ## What about A2UI (cards)?
 
@@ -72,10 +72,9 @@ small built-in renderer in `static/index.html` draws them as cards.
   `List`, `Image`, `Icon`. Anything else **falls back to plain text**, so a reply
   never blanks. (`Icon` uses the Material Symbols web font; if it can't load, the
   icon shows its name as text.)
-- It's **display-only** — matching `enable-a2ui`, buttons/actions aren't wired.
-- Because you own this renderer, it's more reliable here than in `adk web` (no
-  streaming quirks, no stuck-renderer blanks). This makes a nice capstone: the
-  agent's cards render in *your* app.
+- It's **display-only**, matching `enable-a2ui`: buttons/actions aren't wired.
+- Because you own this renderer, it's more reliable than `adk web` (no streaming
+  quirks or stuck-renderer blanks).
 - Keep the agent's A2UI output small and flat (the `enable-a2ui` guidance) so the
   renderer has less to trip on.
 

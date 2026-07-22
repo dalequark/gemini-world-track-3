@@ -116,5 +116,13 @@ First eval question: <one example of a "good" response for this agent>
 The "first eval question" plants the evaluation mindset early — defining "good"
 is the hardest, most valuable part of the lab.
 
-**Do not build or implement anything in this skill.** Your only output is
-`project_brief.md`; building from it happens in the next step of the lab.
+## After you write the brief: STOP
+
+Writing `project_brief.md` is the end of this skill. Do **not** build, scaffold,
+install, or write any agent code — and do **not** *offer or ask* to ("want me to
+build it now?", "shall I implement this?", "ready to scaffold?"). Offering to
+build is still going off-script: the lab has the participant build the agent
+incrementally in the steps that follow, and jumping ahead defeats the point.
+
+End your turn by telling them the brief is saved and to continue with the next
+step of the lab (they can edit `project_brief.md` first if they'd like). Then stop.
