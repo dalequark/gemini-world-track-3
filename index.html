@@ -470,15 +470,28 @@ Of course, you are able to update your tool instructions from the last section t
 
 # Enrich Responses with A2UI
 
-While text is fine, your agent can do better using the power of A2UI. A2UI lets it return real UI, such as cards, forms, charts, and tables. Your agent emits structured JSON (a declarative description of the UI), and a renderer turns it into interactive components. A2UI is open source and easy to implement into any agent built with ADK.
+So far your agent replies in plain text. A2UI lets it reply with real UI instead: cards, tables, forms, and buttons. Your agent writes a small description of the UI as JSON, and a renderer turns that JSON into components on screen. A2UI is open source and works with any agent built with ADK.
 
-This is an **agent-side** capability, so turn it on the same way you added your other features — and test it right in the playground:
+There are two pieces to set up, and you need both, or you will just see raw JSON:
+
+1. A system prompt that teaches the model to output valid A2UI JSON. The a2ui-agent-sdk builds this for you with `A2uiSchemaManager`.
+2. A small callback (`a2ui_utils.py`) that wraps the model's JSON in the format the ADK dev UI's built-in renderer expects. You add it to your agent as an `after_model_callback`.
+
+Ask AGY to set up both. This uses the `enable-a2ui` skill, which ships the callback file for you:
 
 ```bash
-Add A2UI to my agent with the a2ui-agent-sdk and the Basic Catalog: build the system prompt with A2uiSchemaManager (allow Card, Table, Text, Image, and Button), and validate the model's output with parse_response_to_parts before returning it.
+Use the enable-a2ui skill to add A2UI to my agent: build the system prompt with A2uiSchemaManager (version 0.8) and the Basic Catalog, copy in a2ui_utils.py, and wire it up as an after_model_callback.
 ```
 
-The ADK playground renders A2UI out of the box, so no frontend needed yet. Ask for something that fits a card or table and watch the widget appear. Your agent should return a valid A2UI JSON payload (wrapped with the application/json+a2ui MIME type). For example, if you're building a marketplace agent: "Show me all the items you have in stock" (should render a table) or "Give me the details for this item" (a card). Adapt to whatever your agent knows about.
+One thing to watch: pin A2UI to version 0.8. The callback recognizes v0.8 messages, so if the schema manager emits v0.9 the callback never fires and you are back to raw JSON.
+
+Now test it. The ADK dev UI (`adk web`) has a built-in A2UI renderer, but it only renders once the callback is in place. Start it (or restart it) with:
+
+```bash
+adk web --port 8080 --allow_origins "*" --reload_agents
+```
+
+Start a new session, then ask for something that fits a card or table. For a store agent, "Show me what's in stock" might render a table, and "Tell me about this item" might render a card. Adapt the question to whatever your agent knows about. You should see real UI instead of JSON. If you still see JSON, check that the callback is wired up and that you are on version 0.8.
 
 # Building a Frontend
 
@@ -496,13 +509,15 @@ Grab the resource name from the fresh `deployment_metadata.json`. You'll point t
 
 ## Build the frontend
 
-We don't hand you a pre-built frontend; instead, ask AGY to build a **minimal** one for you. This invokes the `build-a2ui-frontend` skill, which copies an agent-agnostic FastAPI proxy + chat UI into a `frontend/` folder: the browser only ever talks to the proxy (same origin, no CORS), and the proxy authenticates to your deployed agent with Application Default Credentials. It already detects and renders A2UI payloads, so the cards and tables you saw in the playground show up here too.
+We don't hand you a pre-built frontend. Instead, ask AGY to build a minimal one for you. This invokes the `build-agent-frontend` skill, which copies a small FastAPI proxy and chat UI into a `frontend/` folder. The browser only ever talks to the proxy (same origin, no CORS), and the proxy authenticates to your deployed agent with Application Default Credentials.
+
+This is a plain text chat, so it shows your agent's text replies. The A2UI cards and tables you saw in the ADK dev UI stay there for now. Rendering A2UI in a custom frontend is a separate step that this lab doesn't cover yet.
 
 ```bash
-Using the build-a2ui-frontend skill, copy its minimal FastAPI proxy + chat UI template into ./frontend and wire it to my deployed agent with AGENT_ENGINE_RESOURCE_NAME. Keep it minimal — do not build a full React app or pull in a large sample frontend.
+Using the build-agent-frontend skill, copy its minimal FastAPI proxy and chat UI template into ./frontend and wire it to my deployed agent with AGENT_ENGINE_RESOURCE_NAME. Keep it a plain chat UI. Do not build a React app or pull in a large sample frontend.
 ```
 
-(If your project already has a web frontend you'd rather keep, tell AGY to adapt *that* one to the same proxy + A2UI pattern instead of creating a new one.)
+(If your project already has a web frontend you'd rather keep, tell AGY to adapt that one to the same proxy pattern instead of creating a new one.)
 
 ## Test Locally
 
