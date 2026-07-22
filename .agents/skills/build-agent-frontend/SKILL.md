@@ -23,8 +23,13 @@ Browser (chat UI)  ->  FastAPI proxy (main.py)  ->  deployed agent
 ```
 
 - The browser only talks to the proxy (same origin, no CORS, no cloud creds).
+- The UI sends a **stable per-browser `user_id`** (a `localStorage` UUID) with
+  each message, so every visitor gets their own agent session and memory. If the
+  browser sends no id the proxy falls back to a single shared `"web-user"` —
+  fine for one person testing, but everyone would then share one conversation.
+  Swap in a real signed-in user id if you add auth.
 - The proxy authenticates with Application Default Credentials and forwards chat,
-  reusing **one session per user** so the agent remembers the conversation.
+  reusing **one session per `user_id`** so the agent remembers the conversation.
 - The proxy returns structured parts (`text` or `a2ui`); the UI shows text
   replies and renders A2UI cards.
 
