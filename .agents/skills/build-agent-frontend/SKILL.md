@@ -1,16 +1,16 @@
 ---
 name: build-agent-frontend
-description: Build a simple plain-text chat web frontend for a deployed ADK / Agent Engine agent and wire it up (browser -> FastAPI proxy -> agent), then ship it to Cloud Run. Use when the user wants to build a frontend, a chat UI, or a web interface for their deployed agent, hook a UI up to their agent, set up the FastAPI proxy, or sort out the browser-to-proxy-to-agent auth. This is a plain chat UI; for A2UI rich UI (cards/tables) that renders in the ADK dev UI, use the enable-a2ui skill instead. A complete working template (FastAPI proxy + chat UI) ships alongside this skill in ./template. Don't use for agent-side logic unrelated to the UI.
+description: Build a chat web frontend for a deployed ADK / Agent Engine agent and wire it up (browser -> FastAPI proxy -> agent), then ship it to Cloud Run. The chat UI shows plain-text replies AND natively renders the agent's A2UI cards via a small built-in renderer, so it works whether or not the agent has A2UI enabled. Use when the user wants to build a frontend, a chat UI, or a web interface for their deployed agent, hook a UI up to their agent, set up the FastAPI proxy, or sort out the browser-to-proxy-to-agent auth. A2UI is an agent-side feature (see the enable-a2ui skill); this skill renders it in the custom frontend. A complete working template (FastAPI proxy + chat UI + A2UI renderer) ships in ./template. Don't use for agent-side logic unrelated to the UI.
 ---
 
 # Build a chat frontend
 
 Give a deployed agent a simple web **chat UI** and wire it to the agent. The
 plumbing is a small **FastAPI proxy**: the browser talks only to the proxy, and
-the proxy authenticates to the deployed agent. This is a **plain-text chat** — for
-A2UI rich UI (cards/tables), see the `enable-a2ui` skill (it renders in the ADK
-dev UI). A complete, working frontend ships in **`./template`** — copy it in,
-don't rebuild it.
+the proxy authenticates to the deployed agent. The UI shows **plain-text replies**
+and also **renders the agent's A2UI cards** natively (a small built-in renderer),
+so it works whether or not the agent has `enable-a2ui`. A complete, working
+frontend ships in **`./template`** — copy it in, don't rebuild it.
 
 > **The one rule:** copy `./template` into the project as `frontend/` and change
 > as little as possible. Do **NOT** build a React app, scaffold a new UI
@@ -25,7 +25,8 @@ Browser (chat UI)  ->  FastAPI proxy (main.py)  ->  deployed agent
 - The browser only talks to the proxy (same origin, no CORS, no cloud creds).
 - The proxy authenticates with Application Default Credentials and forwards chat,
   reusing **one session per user** so the agent remembers the conversation.
-- It shows the agent's **text** replies.
+- The proxy returns structured parts (`text` or `a2ui`); the UI shows text
+  replies and renders A2UI cards.
 
 ## Step 1 — Copy the template
 
@@ -61,13 +62,22 @@ quick-action buttons, filters), add them **inside `static/index.html`** as a
 small, self-contained block that composes a message and sends it — keep the chat
 working and don't pull in a framework.
 
-## What about A2UI (cards/tables)?
+## What about A2UI (cards)?
 
-This frontend is **plain chat**. A2UI rich UI is an **agent-side** feature that
-renders in the **ADK dev UI (`adk web`)** — see the **`enable-a2ui`** skill. If
-an A2UI-enabled agent is queried here, the chat shows a short placeholder for the
-rich-UI reply rather than rendering it (rendering A2UI in a custom frontend is a
-separate, larger job).
+A2UI is an **agent-side** feature (see the **`enable-a2ui`** skill). This frontend
+**renders it**: the proxy unwraps the agent's A2UI blobs into `a2ui` parts, and a
+small built-in renderer in `static/index.html` draws them as cards.
+
+- Supported components: `Card, Column, Row, Text` (with `usageHint`), `Divider`,
+  `List`, `Image`, `Icon`. Anything else **falls back to plain text**, so a reply
+  never blanks. (`Icon` uses the Material Symbols web font; if it can't load, the
+  icon shows its name as text.)
+- It's **display-only** — matching `enable-a2ui`, buttons/actions aren't wired.
+- Because you own this renderer, it's more reliable here than in `adk web` (no
+  streaming quirks, no stuck-renderer blanks). This makes a nice capstone: the
+  agent's cards render in *your* app.
+- Keep the agent's A2UI output small and flat (the `enable-a2ui` guidance) so the
+  renderer has less to trip on.
 
 ## If something's wrong
 
@@ -80,6 +90,12 @@ separate, larger job).
 - **Replies don't come through:** the streamed part shape can vary by SDK version
   — verify against your deployed agent with the Developer Knowledge MCP and adjust
   `_extract_parts` in `main.py`.
+- **A2UI card shows as plain text instead of a card:** the renderer hit a
+  component it doesn't support (or a broken surface) and fell back to text — this
+  is intended, not a crash. Keep the agent's surfaces to the supported subset.
+- **`(The agent didn't return a reply.)`:** the turn produced no text or UI —
+  usually the agent only ran tools or a tool stalled server-side (an agent/deploy
+  issue, not the frontend). Check the agent's logs.
 
 ## Reference
 
