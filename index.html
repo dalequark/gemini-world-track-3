@@ -485,13 +485,13 @@ Use the enable-a2ui skill to add A2UI to my agent: build the system prompt with 
 
 One thing to watch: pin A2UI to version 0.8. The callback recognizes v0.8 messages, so if the schema manager emits v0.9 the callback never fires and you are back to raw JSON.
 
-Now test it. The ADK dev UI (`adk web`) has a built-in A2UI renderer, but it only renders once the callback is in place. Start it (or restart it) with:
+Now test it in the same Playground you have been using. The Playground is really the ADK dev UI (`agents-cli playground` runs `adk web` for you), and it comes with a built-in A2UI renderer. It only renders A2UI once the callback is in place, so restart the Playground to pick up your changes:
 
 ```bash
-adk web --port 8080 --allow_origins "*" --reload_agents
+Restart the agent playground so it picks up my latest changes.
 ```
 
-Start a new session, then ask for something that fits a card or table. For a store agent, "Show me what's in stock" might render a table, and "Tell me about this item" might render a card. Adapt the question to whatever your agent knows about. You should see real UI instead of JSON. If you still see JSON, check that the callback is wired up and that you are on version 0.8.
+Start a new session, then ask for something that fits a card or table. For a store agent, "Show me what's in stock" might render a table, and "Tell me about this item" might render a card. Adapt the question to whatever your agent knows about. You should see real UI instead of JSON. If you still see raw JSON, check that the callback is wired up and that you are on version 0.8. (If the Playground in your environment still won't render it, you can run the dev UI directly with `adk web --port 8080 --allow_origins "*" --reload_agents`.)
 
 # Building a Frontend
 
