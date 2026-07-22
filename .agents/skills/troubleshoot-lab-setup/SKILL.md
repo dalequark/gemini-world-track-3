@@ -179,9 +179,19 @@ gcloud projects add-iam-policy-binding "$GOOGLE_CLOUD_PROJECT" \
   --role="roles/datastore.user"
 ```
 
-(A Cloud Storage tool needs a storage role like `roles/storage.objectViewer`.)
-Also make sure you **seeded your data in the same project you deployed to** —
-otherwise the deployed agent reads an empty database.
+For an agent that writes files to Cloud Storage (for example one that uploads
+generated images), grant its service account write access to the bucket. Scope the
+grant to the bucket, not the whole project:
+
+```bash
+gcloud storage buckets add-iam-policy-binding "gs://<your-image-bucket>" \
+  --member="serviceAccount:service-$(gcloud projects describe "$GOOGLE_CLOUD_PROJECT" --format='value(projectNumber)')@gcp-sa-aiplatform-re.iam.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+```
+
+A read-only Cloud Storage tool needs only `roles/storage.objectViewer` instead.
+Also make sure you seeded your data in the same project you deployed to, otherwise
+the deployed agent reads an empty database.
 
 ### Frontend can't reach the agent / no reply / errors on send
 Run all frontend commands from the `frontend/` folder.
@@ -250,10 +260,22 @@ service account (not your user account), then retry.
 2. Does a sandbox actually exist? If not, create one from the agent engine
    resource before running code.
 
-### Image generation fails
-Usually an API/permission issue (#3, #4) or a region/model-access mismatch.
-Confirm the model and region are available for the project, and that the API is
-enabled.
+### Image generation fails, or the image doesn't appear
+If the tool errors while generating, it is usually an API/permission issue (#3, #4)
+or a region/model-access mismatch. Confirm the model and region are available for
+the project and that the API is enabled.
+
+If the image shows in the Playground but not on the deployed agent, or a card or the
+frontend shows a broken image, the agent uploads generated images to a public bucket
+and shows the public URL. Two things must hold:
+
+1. The deployed service account can write to the bucket
+   (`roles/storage.objectAdmin`, see "After you deploy" above). It works locally
+   because you run as yourself, but the deployed agent runs as its own account.
+2. The bucket serves objects publicly. Grant `allUsers` the
+   `roles/storage.objectViewer` role on the bucket. If that grant fails with
+   `public access prevention is enforced`, the project's organization blocks public
+   buckets and the public-URL approach will not work there.
 
 ### Antigravity / MCP behaving oddly right after install
 If you just installed agents-cli or the Developer Knowledge MCP, **restart

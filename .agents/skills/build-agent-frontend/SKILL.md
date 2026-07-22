@@ -77,6 +77,10 @@ small built-in renderer in `static/index.html` draws them as cards.
   `List`, `Image`, `Icon`. Anything else **falls back to plain text**, so a reply
   never blanks. (`Icon` uses the Material Symbols web font; if it can't load, the
   icon shows its name as text.)
+- `Image` renders inline when its url is a public `http(s)` link. If the agent
+  uploads a generated image to a public bucket and puts that URL in the `Image`,
+  the picture shows in the chat. A bare artifact filename has no fetchable URL and
+  shows as a broken image.
 - It's **display-only**, matching `enable-a2ui`: buttons/actions aren't wired.
 - Because you own this renderer, it's more reliable than `adk web` (no streaming
   quirks or stuck-renderer blanks).

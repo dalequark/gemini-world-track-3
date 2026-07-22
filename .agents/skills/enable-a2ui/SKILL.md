@@ -1,6 +1,6 @@
 ---
 name: enable-a2ui
-description: Make an ADK agent emit A2UI so its replies render as rich display UI (cards, and tables built from rows/columns) in the ADK dev UI (adk web) instead of plain text. Use when the user wants to add A2UI to their agent, render cards or tables in adk web, or when A2UI shows up as raw JSON or a blank card. Ships a ready-made a2ui_utils.py (the after_model_callback adk web's renderer needs) in ./template. Display-only in adk web (buttons, actions, and modals don't function); shipping A2UI to a custom production frontend is a separate concern.
+description: Make an ADK agent emit A2UI so its replies render as rich display UI (cards, tables built from rows/columns, and images from a public URL) in the ADK dev UI (adk web) instead of plain text. Use when the user wants to add A2UI to their agent, render cards or tables in adk web, show an image inside a card, or when A2UI shows up as raw JSON or a blank card. Ships a ready-made a2ui_utils.py (the after_model_callback adk web's renderer needs) in ./template. Display-only in adk web (buttons, actions, and modals don't function); shipping A2UI to a custom production frontend is a separate concern.
 ---
 
 # Enable A2UI (renders in adk web)
@@ -56,11 +56,15 @@ instruction = schema_manager.generate_system_prompt(
     ui_description=(
         "Keep every surface tiny and flat: ONE Card > ONE Column > a few Text rows. "
         "Never nest a Card inside a Card. "
-        "Use ONLY these components: Card, Column, Row, Text — no Table or Heading "
-        "(unsupported), and no Buttons/actions/forms (they do nothing in adk web). "
-        "Do NOT emit an Image component for generated/artifact images: they have no "
-        "fetchable URL, so adk web shows a broken-image icon. Generated media appears "
-        "in the Artifacts panel — just add a short Text line noting it. "
+        "Use ONLY these components: Card, Column, Row, Text, and Image. Do not use "
+        "Table or Heading (unsupported), or Buttons, actions, or forms (they do "
+        "nothing in adk web). "
+        "You may include one Image component, but only when you have a public https "
+        "URL for the image (for example the URL an image tool returns after uploading "
+        "to a public bucket). Set the Image url to that exact https link, for example "
+        "{\"Image\": {\"url\": {\"literalString\": \"https://...\"}}}. Never point an "
+        "Image at a bare filename, an artifact name, or a non-http(s) path. If you do "
+        "not have a public URL, add a short Text line noting the image instead. "
         "No markdown in text; use the usageHint property ('h1', 'h2', 'body') for "
         "headings and emphasis. "
         "Output ONLY the raw A2UI JSON array — no prose, and never wrap it in "
@@ -107,10 +111,13 @@ shows the raw streamed JSON and never swaps in the card.
 - **Supported components:** `Card, Column, Row, Text, Divider, List, Icon, Image`.
   No `Table` or `Heading`: build tables from Rows/Columns of Text, and use `Text`
   + `usageHint` for headings.
-- **Images need a real `http(s)` URL.** A generated image saved as an artifact has
-  no fetchable URL, so an `Image` pointed at the filename shows a broken icon. The
-  callback swaps non-`http(s)` Images for a short text note; the image shows in the
-  **Artifacts panel** instead. For inline media, use `build-agent-frontend`.
+- **Images need a public `http(s)` URL.** An `Image` renders inline only when its
+  url is a fetchable `https` link. If your agent uploads a generated image to
+  a public bucket and passes that URL to the `Image`, it renders inline in the card.
+  An image saved only as an artifact has no fetchable URL, so an `Image` pointed at
+  the filename shows a broken icon; the callback swaps non-`http(s)` Images for a
+  short text note and the image still appears in the Artifacts panel. See
+  `build-agent-frontend` for showing images in a custom frontend.
 - **Small and flat renders best.** Deep nesting and big cards render blank. The
   callback drops broken surfaces (invalid JSON, undefined root, dangling refs) and
   shows a short fallback instead.
