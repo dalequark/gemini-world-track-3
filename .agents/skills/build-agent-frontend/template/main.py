@@ -1,9 +1,8 @@
-"""Minimal FastAPI proxy for a deployed ADK / Agent Engine agent.
+"""Minimal FastAPI proxy for a deployed ADK / Agent Engine agent (plain chat).
 
 The browser talks ONLY to this proxy (same origin, no CORS, no GCP creds in the
 browser). The proxy authenticates with Application Default Credentials and
-forwards chat to the deployed Agent Engine, passing A2UI DataParts through
-unchanged so the client can render them.
+forwards chat to the deployed Agent Engine, returning the agent's text replies.
 
 Run:
   pip install -r requirements.txt
@@ -11,7 +10,7 @@ Run:
   python main.py        # -> http://localhost:8080
 
 NOTE: the exact Agent Engine query method and event/part shape can vary by SDK
-version. If parts don't come through, confirm the current API with the Developer
+version. If replies don't come through, confirm the current API with the Developer
 Knowledge MCP and adjust `_extract_parts` / the `stream_query` call.
 """
 
@@ -24,7 +23,6 @@ from fastapi.staticfiles import StaticFiles
 import vertexai
 from vertexai import agent_engines
 
-A2UI_MIME = "application/json+a2ui"
 RESOURCE = os.environ["AGENT_ENGINE_RESOURCE_NAME"]
 
 vertexai.init()  # project/location come from ADC / env
@@ -32,12 +30,25 @@ _agent = agent_engines.get(RESOURCE)
 
 app = FastAPI()
 
+# Reuse ONE Agent Engine session per user so the agent remembers the conversation.
+# Without a session_id, stream_query starts a NEW session every call (no memory),
+# and "What did I just ask?" would fail.
+_sessions: dict[str, str] = {}
+
+
+def _session_for(user_id: str) -> str:
+    if user_id not in _sessions:
+        s = _agent.create_session(user_id=user_id)
+        _sessions[user_id] = s["id"] if isinstance(s, dict) else s.id
+    return _sessions[user_id]
+
 
 def _extract_parts(event) -> list[dict]:
-    """Normalize one streamed event into [{kind: 'text'|'a2ui', ...}].
+    """Pull text out of one streamed event as [{kind: 'text', text: ...}].
 
-    A2UI parts arrive as DataParts whose metadata mimeType is
-    'application/json+a2ui'. Everything else is treated as text.
+    This is a plain-text chat, so we forward text parts. If a part isn't text
+    (e.g. an A2UI rich-UI blob from an A2UI-enabled agent), we show a short
+    placeholder — A2UI renders in the ADK dev UI (`adk web`), not here.
     """
     if not isinstance(event, dict):
         event = getattr(event, "__dict__", {}) or {}
@@ -47,11 +58,15 @@ def _extract_parts(event) -> list[dict]:
     for p in parts:
         if not isinstance(p, dict):
             continue
-        meta = p.get("metadata") or {}
-        if str(meta.get("mimeType", "")).find("a2ui") != -1:
-            out.append({"kind": "a2ui", "data": p.get("data") or p.get("inline_data")})
-        elif p.get("text"):
+        if p.get("text"):
             out.append({"kind": "text", "text": p["text"]})
+        elif p.get("inline_data") or p.get("inlineData"):
+            out.append(
+                {
+                    "kind": "text",
+                    "text": "[rich UI response — view it rendered in the ADK playground]",
+                }
+            )
     return out
 
 
@@ -61,7 +76,9 @@ async def chat(req: Request):
     message = body.get("message", "")
     user_id = body.get("user_id") or "web-user"
     parts: list[dict] = []
-    for event in _agent.stream_query(message=message, user_id=user_id):
+    for event in _agent.stream_query(
+        message=message, user_id=user_id, session_id=_session_for(user_id)
+    ):
         parts.extend(_extract_parts(event))
     if not parts:
         parts = [{"kind": "text", "text": "(no response)"}]
