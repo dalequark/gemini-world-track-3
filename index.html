@@ -596,7 +596,7 @@ Using the build-agent-frontend skill, copy its minimal FastAPI proxy and chat UI
 
 (If your project already has a web frontend you'd rather keep, tell AGY to adapt that one to the same proxy pattern instead of creating a new one.)
 
-> **A note on user identity.** The template gives each browser a stable `user_id` (a random id saved in `localStorage`) and sends it with every message, so each visitor gets their own agent session — and their own [Memory Bank](#adding-memory). If nothing sends a `user_id`, the proxy falls back to a single shared `web-user`, which is fine while *you* test it solo but means every visitor would share one conversation and one set of memories. For a real multi-user app, replace the `localStorage` id with your signed-in user's id.
+> **A note on user identity.** The template gives each browser a stable `user_id` (a random id saved in `localStorage`) and sends it with every message, so each visitor gets their own agent session — and their own [Memory Bank](#adding-memory). For a real multi-user app, replace the `localStorage` id with your signed-in user's id.
 
 ## Test Locally
 
