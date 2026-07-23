@@ -197,16 +197,34 @@ the deployed agent reads an empty database.
 Run all frontend commands from the `frontend/` folder.
 1. Dependencies installed? `pip install -r requirements.txt`
 2. Is `AGENT_ENGINE_RESOURCE_NAME` set and correct? It must be the resource name
-   from `deployment_metadata.json` (written by the deploy step):
+   from `deployment_metadata.json` (written by the deploy step). Also set
+   `AGENT_DIRECTORY` to your `agent_directory` from `agents-cli-manifest.yaml`
+   (usually `app`), since the A2A endpoint path includes it:
    ```bash
    echo "$AGENT_ENGINE_RESOURCE_NAME"
    export AGENT_ENGINE_RESOURCE_NAME="<paste from deployment_metadata.json>"
+   export AGENT_DIRECTORY="app"
    ```
 3. ADC present locally? (#2)
 4. Sanity test: send a message, then ask "What did I just ask?" — if it can't
    remember, the wiring to the deployed agent is wrong, not the UI.
 5. If plain-text replies work but **tool-backed answers return nothing**, it's not
    the UI — see "Deployed agent gives no reply" below.
+
+### Frontend errors: `operation_schemas()` empty, `no attribute 'stream_query'`, or old proxy 500s
+This is the **agents-cli 1.1.0 (GA)** change. GA deploys ADK agents to Agent Runtime
+as A2A agents and no longer registers the reasoning-engine operation schema, so a
+frontend built on `agent_engines.get(...).stream_query()` fails: `operation_schemas()`
+is empty and the handle has no `stream_query`/`create_session`. Confirm the agent is
+healthy over A2A first:
+```bash
+agents-cli run --url https://<LOCATION>-aiplatform.googleapis.com/v1/<RESOURCE> --mode a2a "hi"
+```
+If that answers, the agent is fine and the proxy is on the dead SDK path. Use the
+current `build-agent-frontend` template, which talks A2A (fetches the agent card and
+sends messages with the a2a-sdk client). Do not try to force an ADK/`stream_query`
+deploy. Every 1.1.0 ADK template is A2A-tagged, and the container serves A2A
+whether `is_a2a` is true or false.
 
 ### Deployed agent gives no reply / a tool works in the Playground but not deployed
 A Firestore-backed tool works in the Playground (your local ADC) but the deployed

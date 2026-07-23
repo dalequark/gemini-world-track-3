@@ -1,6 +1,6 @@
 ---
 name: build-agent-frontend
-description: Build a chat web frontend for a deployed ADK / Agent Engine agent and wire it up (browser -> FastAPI proxy -> agent), then ship it to Cloud Run. The chat UI shows plain-text replies AND natively renders the agent's A2UI cards via a small built-in renderer, so it works whether or not the agent has A2UI enabled. Use when the user wants to build a frontend, a chat UI, or a web interface for their deployed agent, hook a UI up to their agent, set up the FastAPI proxy, or sort out the browser-to-proxy-to-agent auth. A2UI is an agent-side feature (see the enable-a2ui skill); this skill renders it in the custom frontend. A complete working template (FastAPI proxy + chat UI + A2UI renderer) ships in ./template. Don't use for agent-side logic unrelated to the UI.
+description: Build a chat web frontend for a deployed ADK / Agent Engine agent and wire it up (browser -> FastAPI proxy -> agent over the A2A protocol), then ship it to Cloud Run. Targets agents-cli 1.1.0 (GA) Agent Runtime deployments, where the proxy talks A2A (the old stream_query / operation_schemas path is dead). The chat UI shows plain-text replies AND natively renders the agent's A2UI cards via a small built-in renderer, so it works whether or not the agent has A2UI enabled. Use when the user wants to build a frontend, a chat UI, or a web interface for their deployed agent, hook a UI up to their agent, set up the FastAPI proxy, sort out browser-to-proxy-to-agent auth, or fix a frontend that can't reach a 1.1.0 deploy. A2UI is an agent-side feature (see the enable-a2ui skill); this skill renders it in the custom frontend. A complete working template (FastAPI proxy + chat UI + A2UI renderer) ships in ./template. Don't use for agent-side logic unrelated to the UI.
 ---
 
 # Build a chat frontend
@@ -23,8 +23,15 @@ Browser (chat UI)  ->  FastAPI proxy (main.py)  ->  deployed agent
 ```
 
 - The browser only talks to the proxy (same origin, no CORS, no cloud creds).
-- The proxy authenticates with Application Default Credentials and forwards chat,
-  reusing **one session per user** so the agent remembers the conversation.
+- The proxy authenticates with Application Default Credentials and talks to the
+  deployed agent over the A2A protocol. agents-cli 1.1.0 (GA) deploys ADK agents
+  to Agent Runtime as A2A agents and no longer registers the reasoning-engine
+  operation schema, so the old `agent_engines.get(...).stream_query()` path is
+  dead (its `operation_schemas()` is empty). The proxy fetches the agent's A2A
+  card once, then sends each message with the a2a-sdk client (the same path
+  `agents-cli run --mode a2a` uses). This works for both A2A and plain ADK 1.1.0
+  deployments, since the container serves A2A either way.
+- It reuses one A2A context per user so the agent remembers the conversation.
 - The proxy returns structured parts (`text` or `a2ui`); the UI shows text
   replies and renders A2UI cards.
 
@@ -40,6 +47,7 @@ From `frontend/`:
 ```bash
 pip install -r requirements.txt
 export AGENT_ENGINE_RESOURCE_NAME="<from deployment_metadata.json>"
+export AGENT_DIRECTORY="app"   # your agent_directory from agents-cli-manifest.yaml
 python main.py     # -> http://localhost:8080
 ```
 
@@ -65,8 +73,9 @@ the UI grows without a new framework or build step.
 ## What about A2UI (cards)?
 
 A2UI is an **agent-side** feature (see the **`enable-a2ui`** skill). This frontend
-**renders it**: the proxy unwraps the agent's A2UI blobs into `a2ui` parts, and a
-small built-in renderer in `static/index.html` draws them as cards.
+**renders it**: over A2A the agent returns its A2UI as data parts tagged
+`application/json+a2ui`, the proxy turns each into an `a2ui` part, and a small
+built-in renderer in `static/index.html` draws them as cards.
 
 - Supported components: `Card, Column, Row, Text` (with `usageHint`), `Divider`,
   `List`, `Image`, `Icon`. Anything else **falls back to plain text**, so a reply
@@ -87,12 +96,17 @@ small built-in renderer in `static/index.html` draws them as cards.
 - **403 from `/chat`:** ADC missing locally, or the Cloud Run service account
   lacks `roles/aiplatform.user`. (See the `troubleshoot-lab-setup` skill.)
 - **Agent forgets the conversation ("What did I just ask?" fails):** the proxy
-  must reuse one session per user — the template's `_session_for()` handles this.
+  must reuse one A2A context per user, which the template's `_contexts` dict
+  handles by carrying `task.contextId` across turns.
 - **Nothing renders / CORS error:** the browser is calling the agent directly; it
   must call the proxy (same origin) only.
-- **Replies don't come through:** the streamed part shape can vary by SDK version
-  — verify against your deployed agent with the Developer Knowledge MCP and adjust
-  `_extract_parts` in `main.py`.
+- **`operation_schemas()` empty, or old `stream_query` code returns nothing:**
+  that is a GA 1.1.0 Agent Runtime deployment (A2A, no reasoning-engine schema).
+  This template already talks A2A, so use it rather than the old SDK path.
+- **Replies don't come through:** confirm the agent answers over A2A first with
+  `agents-cli run --url <resource-url> --mode a2a "hi"`. The A2A response part
+  shape can vary by a2a-sdk version; adjust `_extract_parts` in `main.py` if
+  needed.
 - **A2UI card shows as plain text instead of a card:** the renderer hit a
   component it doesn't support (or a broken surface) and fell back to text — this
   is intended, not a crash. Keep the agent's surfaces to the supported subset.
