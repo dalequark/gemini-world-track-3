@@ -191,7 +191,13 @@ form.addEventListener("submit", async (ev) => {
   const b = bubble("agent"); b.textContent = "…";
   try {
     const res = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
-    const data = await res.json();
+    // Read as text first, then parse. If the proxy ever returns a non-JSON error
+    // page (e.g. a plain "Internal Server Error"), show that body instead of a
+    // cryptic "Unexpected token" JSON error.
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); }
+    catch { throw new Error(`Server returned non-JSON (HTTP ${res.status}). ${raw.slice(0, 300)}`); }
     renderReply(b, data.parts || []);
   } catch (e) {
     b.textContent = "Error: " + e.message;

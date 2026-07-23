@@ -78,6 +78,21 @@ def _auth_headers() -> dict[str, str]:
 
 app = FastAPI()
 
+
+@app.exception_handler(Exception)
+async def _json_errors(request: Request, exc: Exception):
+    # Always return JSON so the browser never receives a plain-text 500 page
+    # (which shows up in the chat as "Unexpected token 'I', "Internal S"... is
+    # not valid JSON"). Any server-side failure now surfaces as a readable
+    # message in the chat bubble instead.
+    return JSONResponse(
+        status_code=200,
+        content={
+            "parts": [{"kind": "text", "text": f"Error: {type(exc).__name__}: {exc}"}]
+        },
+    )
+
+
 # Reuse ONE A2A context per user so the agent remembers the conversation.
 _contexts: dict[str, str] = {}
 # Cache the agent card after the first fetch.
