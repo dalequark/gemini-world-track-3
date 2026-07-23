@@ -405,37 +405,35 @@ We don't hand you a pre-built frontend. Instead, ask AGY to build a minimal one 
 The chat shows your agent's text replies and renders its A2UI cards. The same cards you saw in the ADK dev UI now show up in your own web app, including any generated images (the card's `Image` points at the public URL from your Cloud Storage bucket). The template ships a small built-in renderer, so it works whether or not your agent uses A2UI (anything it can't render falls back to plain text).
 
 ```bash
-Using the build-agent-frontend skill, copy its minimal FastAPI proxy and chat UI template into ./frontend and wire it to my deployed agent with AGENT_ENGINE_RESOURCE_NAME. Keep it a plain chat UI. Do not build a React app or pull in a large sample frontend.
+Using the build-agent-frontend skill, copy its minimal FastAPI proxy and chat UI template into ./frontend and wire it to my deployed agent using AGENT_ENGINE_RESOURCE_NAME and AGENT_DIRECTORY (my agent_directory from agents-cli-manifest.yaml). Keep it a plain chat UI. Do not build a React app or pull in a large sample frontend.
 ```
 
 (If your project already has a web frontend you'd rather keep, tell AGY to adapt that one to the same proxy pattern instead of creating a new one.)
 
 ## Test Locally
 
-Before deploying the frontend, confirm that your code can reach your agent that is currently deployed on Agent Platform. Locally just means the frontend server runs on your current machine, instead of Cloud Run, but it still talks to the same endpoint as if it was deployed on Cloud Run. This is to ensure that we don't face any wiring issues before we deploy to Cloud Run, and that the endpoint is actually live and working properly.
+Before deploying the frontend, confirm that your code can reach your agent that is currently deployed on Agent Platform. Running locally means the frontend server runs on your machine instead of Cloud Run, but it talks to the same deployed agent. This catches wiring issues before you ship to Cloud Run.
 
-Run all of these from the frontend/ folder. First time only, install its dependencies:
+Ask AGY to install the frontend and start it locally, pointed at your deployed agent:
+
+```bash
+Run my frontend locally from the frontend/ folder: install its dependencies, set AGENT_ENGINE_RESOURCE_NAME to the resource name in deployment_metadata.json and AGENT_DIRECTORY to my agent_directory from agents-cli-manifest.yaml, then start the server on http://localhost:8080.
+```
+
+If you would rather run it yourself, from the `frontend/` folder:
 
 ```bash
 pip install -r requirements.txt
-```
-
-1. Tell the frontend which agent it should talk to by pointing it at the resource name from the redeploy you just did (from the fresh `deployment_metadata.json`):
-
-```bash
 export AGENT_ENGINE_RESOURCE_NAME="<paste the resource name from deployment_metadata.json>"
-```
-
-2. Start the frontend server on your laptop and it should start listening on http://localhost:8080:
-
-```bash
+export AGENT_DIRECTORY="app"
 python main.py
 ```
 
-3. Open http://localhost:8080 on your web browser and you should see the UI that you built.
-![](images/frontend-skeleton-demo.png)
+Then test it in your browser:
 
-4. Send a message and wait for a reply. Then, in the same chat, ask it “What did I just ask?” to ensure that everything is wired up correctly with a real session. If it can't remember, then it isn't working properly and you should check the resource deployment from the earlier step.
+1. Open http://localhost:8080 and you should see your chat UI.
+![](images/frontend-skeleton-demo.png)
+2. Send a message and wait for a reply. Then, in the same chat, ask "What did I just ask?" to confirm the session is wired up correctly. If it can't remember, the frontend is not reaching your deployed agent, so recheck the resource name from the earlier step.
 
 ## Deploy to Cloud Run
 Finally, ship the frontend so anyone can use it.
@@ -445,7 +443,7 @@ Note that the frontend that we are shipping deploys differently from the agent. 
 The Cloud Run service runs as a different service identity than you did locally, so its service account needs roles/aiplatform.user or /chat will error out.
 
 ```bash
-Deploy the frontend to Cloud Run pointing at my AGENT_ENGINE_RESOURCE_NAME, and grant the Cloud Run service account roles/aiplatform.user so it can reach the agent.
+Deploy the frontend to Cloud Run pointing at my AGENT_ENGINE_RESOURCE_NAME and AGENT_DIRECTORY, and grant the Cloud Run service account roles/aiplatform.user so it can reach the agent.
 ```
 
 Or run it directly:
@@ -455,7 +453,7 @@ gcloud run deploy <your-frontend-name> \
   --source . \
   --region <your-region> \
   --allow-unauthenticated \
-  --set-env-vars="AGENT_ENGINE_RESOURCE_NAME=$AGENT_ENGINE_RESOURCE_NAME"
+  --set-env-vars="AGENT_ENGINE_RESOURCE_NAME=$AGENT_ENGINE_RESOURCE_NAME,AGENT_DIRECTORY=$AGENT_DIRECTORY"
 ```
 
 Open the Cloud Run URL and chat with your deployed agent. That's the full loop: agent on Agent Platform, frontend on Cloud Run, talking to each other.
