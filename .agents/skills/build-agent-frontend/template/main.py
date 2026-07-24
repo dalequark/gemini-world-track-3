@@ -112,13 +112,50 @@ async def _get_card(client: httpx.AsyncClient) -> AgentCard:
     return _card
 
 
+_A2UI_DIRECTIVE_KEYS = ("createSurface", "surfaceUpdate", "beginRendering")
+
+
+def _a2ui_directives(data) -> list:
+    """Pull A2UI directive objects out of an A2A data-part payload.
+
+    The A2UI payload arrives in different shapes depending on how the agent
+    emits it and on the a2a-sdk / ADK version:
+      1. As an ADK function_response data part (no application/json+a2ui
+         mimeType), i.e.
+         {"name": "send_a2ui_json_to_client",
+          "response": {"validated_a2ui_json": [ <directive>, ... ]}}
+      2. Directly as {"validated_a2ui_json": [ <directive>, ... ]}
+      3. As a single directive dict (has createSurface/surfaceUpdate/...).
+      4. As a bare list of directives.
+    Returns a flat list of directive dicts (possibly empty).
+    """
+    if data is None:
+        return []
+    if isinstance(data, list):
+        return [d for d in data if isinstance(d, dict)]
+    if not isinstance(data, dict):
+        return []
+    # Shape 1: ADK function_response wrapper.
+    resp = data.get("response")
+    if isinstance(resp, dict) and isinstance(resp.get("validated_a2ui_json"), list):
+        return [d for d in resp["validated_a2ui_json"] if isinstance(d, dict)]
+    # Shape 2: unwrapped validated_a2ui_json.
+    if isinstance(data.get("validated_a2ui_json"), list):
+        return [d for d in data["validated_a2ui_json"] if isinstance(d, dict)]
+    # Shape 3: the data IS a single directive.
+    if any(k in data for k in _A2UI_DIRECTIVE_KEYS):
+        return [data]
+    return []
+
+
 def _extract_parts(parts: list) -> list[dict]:
     """Turn A2A response parts into structured parts for the chat UI.
 
-    Text parts pass through as {"kind": "text"}. A2UI data parts (tagged
-    application/json+a2ui) become {"kind": "a2ui", "data": <message>} so the UI
-    renders the card; each data part is one A2UI message (beginRendering or
-    surfaceUpdate).
+    Text parts pass through as {"kind": "text"}. A2UI data parts become
+    {"kind": "a2ui", "data": <directive>} so the UI renders the card; each
+    directive is one A2UI message (beginRendering / surfaceUpdate). A2UI can
+    arrive either tagged with the application/json+a2ui mimeType or wrapped in
+    an ADK function_response (see _a2ui_directives), so both are handled.
     """
     out: list[dict] = []
     for p in parts:
@@ -126,10 +163,18 @@ def _extract_parts(parts: list) -> list[dict]:
         if isinstance(root, TextPart) and getattr(root, "text", None):
             out.append({"kind": "text", "text": root.text})
         elif getattr(root, "data", None) is not None:
+            data = root.data
             meta = getattr(root, "metadata", None) or {}
             mime = meta.get("mimeType") if isinstance(meta, dict) else None
-            if mime == _A2UI_MIME:
-                out.append({"kind": "a2ui", "data": root.data})
+            directives = _a2ui_directives(data)
+            if mime == _A2UI_MIME and not directives:
+                # A2UI payload carried directly on the data part.
+                out.append({"kind": "a2ui", "data": data})
+            elif directives:
+                # Wrapped A2UI (e.g. ADK function_response); emit one part per
+                # directive so the UI receives a flat array of directives.
+                for d in directives:
+                    out.append({"kind": "a2ui", "data": d})
         elif isinstance(root, FilePart):
             uri = getattr(getattr(root, "file", None), "uri", None)
             if uri:
@@ -148,6 +193,14 @@ async def chat(req: Request):
         card = await _get_card(client)
         factory = ClientFactory(
             ClientConfig(
+                # Force blocking message/send instead of streaming. Many ADK
+                # agents deliver their output (text, and especially A2UI/tool
+                # results) only in the blocking response: over the streaming
+                # transport the completed TaskStatusUpdateEvent can arrive with
+                # an empty status.message and the final task with 0 artifacts,
+                # so the reply is silently lost. Blocking returns the full task
+                # with artifacts populated.
+                streaming=False,
                 supported_transports=[
                     TransportProtocol.jsonrpc,
                     TransportProtocol.http_json,
